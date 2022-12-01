@@ -1,0 +1,24 @@
+﻿{
+  "configurations": [
+    {
+      "name": "x64-debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\build\\${name}",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "variables": [
+        { "name": "VCPKG_TARGET_TRIPLET", "value": "x64-windows" }
+      ]
+    },
+    {
+      "name": "x64-release",
+      "generator": "Ninja",
+      "configurationType": "MinSizeRel",
+      "buildRoot": "${projectDir}\\build\\${name}",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "variables": [
+        { "name": "VCPKG_TARGET_TRIPLET", "value": "x64-windows-static-md" }
+      ]
+    }
+  ]
+}
