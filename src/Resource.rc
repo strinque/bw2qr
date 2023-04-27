@@ -77,12 +77,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", ""
-            VALUE "FileDescription", ""
+            VALUE "FileDescription", "convert bitwarden json file to pdf containing qrcode"
             VALUE "FileVersion", "1.0.0.0"
-            VALUE "InternalName", "xxx.exe"
+            VALUE "InternalName", "bw2qr.exe"
             VALUE "LegalCopyright", ""
-            VALUE "OriginalFilename", "xxx.exe"
-            VALUE "ProductName", "xxx"
+            VALUE "OriginalFilename", "bw2qr.exe"
+            VALUE "ProductName", "bw2qr"
             VALUE "ProductVersion", "1.0.0.0"
         END
     END

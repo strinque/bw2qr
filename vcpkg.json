@@ -1,8 +1,7 @@
 {
-    "name": "xxx",
+    "name": "bw2qr",
     "version": "1.0.0",
     "dependencies": [
-      "spdlog",
       "winpp"
     ]
 }

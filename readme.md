@@ -1,11 +1,34 @@
-# xxx
+# bw2qr
 
 ## Introduction
+This project is a c++ program that allows you to convert an exported `json` vault file from **bitwarden** or **vaultwarden** into a printable `pdf` file. This can be useful for securely storing all of your passwords in one place. In addition, the program uses **qrcode** with high redundancy mode to print each entry, which helps to recover damaged entries.
 
+The program reads a **bitwarden** or **vaultwarden** `json` file and export specific entries that are tagged as `favorite` as **qrcode** exported in a `pdf` format. The exported entries include important login information such as the *username*, *password*, *authenticator key*, and *added custom fields*.
+
+Once the **qrcode** is scanned, it can be read as text and includes all of the important login information in a readable format.  
+For example:
+``` json
+{
+  "login": {
+    "username": "myusername",
+    "password": "mypassword",
+    "totp": "authenticator key",
+  },
+  "fields": [
+    { "seed": "this is a test" }
+  ]
+}
+```
+
+!!! tip
+    All **qrcode** are using the version: `33` with ecc: `high` (up to 30% of redondancy).  
+    Thus, the maximum size of data that can be embedded in each **qrcode**: `511` bytes.
 
 ## Usage
 
 ``` console
+bw2qr.exe --file bitwarden.json \
+              --output file.pdf
 ```
 
 ## Requirements
@@ -60,8 +83,8 @@ To build the program with `vcpkg` and `cmake`, follow these steps:
 ``` console
 $VCPKG_DIR = Get-Content "$Env:LocalAppData/vcpkg/vcpkg.path.txt" -Raw 
 
-git clone ssh://git@git.fum-server.fr:1863/git/xxx.git
-cd xxx
+git clone ssh://git@git.fum-server.fr:1863/git/bw2qr.git
+cd bw2qr
 mkdir build; cd build
 cmake -DCMAKE_BUILD_TYPE="MinSizeRel" `
       -DVCPKG_TARGET_TRIPLET="x64-windows-static-md" `
@@ -70,7 +93,7 @@ cmake -DCMAKE_BUILD_TYPE="MinSizeRel" `
 cmake --build . --config MinSizeRel
 ```
 
-The program executable should be compiled in: `xxx\build\src\MinSizeRel\xxx.exe`.
+The program executable should be compiled in: `bw2qr\build\src\MinSizeRel\bw2qr.exe`.
 
 ### Build with Visual Studio
 
@@ -83,10 +106,10 @@ The following steps needs to be executed in order to build/debug the program:
 
 ``` console
 File => Open => Folder...
-  Choose xxx root directory
+  Choose bw2qr root directory
 Solution Explorer => Switch between solutions and available views => CMake Targets View
 Select x64-release or x64-debug
-Select the src\xxx.exe (not bin\xxx.exe)
+Select the src\bw2qr.exe (not bin\bw2qr.exe)
 ```
 
 To add command-line arguments for debugging the program:
@@ -96,5 +119,8 @@ Solution Explorer => Project => (executable) => Debug and Launch Settings => src
 ```
 
 ``` json
-  "args": []
+  "args": [
+    "--file \"${ProjectDir}\\model\\bitwarden.json\"", \
+    "--output \"${ProjectDir}\\model\\file.pdf\""
+  ]
 ```

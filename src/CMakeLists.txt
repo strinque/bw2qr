@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
-project(xxx)
-set(TARGET_EXE "xxx-exe")
-set(TARGET_NAME "xxx")
+project(bw2qr)
+set(TARGET_EXE "bw2qr-exe")
+set(TARGET_NAME "bw2qr")
 
 # set required c++ version
 set(CMAKE_CXX_STANDARD 17)
@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # set project source-files
 set(SOURCE_FILES
-  xxx.cpp)
+  bw2qr.cpp)
 set(HEADER_FILES
   )
 set(RESOURCE_FILES
@@ -21,7 +21,6 @@ add_executable(${TARGET_EXE} ${SOURCE_FILES} ${HEADER_FILES} ${RESOURCE_FILES})
 set_target_properties(${TARGET_EXE} PROPERTIES OUTPUT_NAME ${TARGET_NAME})
 
 # list of required third-party libraries
-find_package(spdlog CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(winpp CONFIG REQUIRED)
 
@@ -54,7 +53,6 @@ target_link_directories(${TARGET_EXE}
 target_link_libraries(${TARGET_EXE}
   PRIVATE
     fmt::fmt-header-only
-    spdlog::spdlog_header_only
     winpp::winpp)
 
 # compress executable using upx
