@@ -1,0 +1,101 @@
+{
+  "encrypted": false,
+  "folders": [
+    {
+      "id": "94353183-eb46-4a87-ac6e-84592df83683",
+      "name": "Browser"
+    }
+  ],
+  "items": [
+    {
+      "id": "5177e0da-012c-4a59-9f27-476790420e01",
+      "organizationId": null,
+      "folderId": "94353183-eb46-4a87-ac6e-84592df83683",
+      "type": 1,
+      "reprompt": 0,
+      "name": "chrome",
+      "notes": null,
+      "favorite": true,
+      "fields": [
+      {
+          "name": "editor",
+          "value": "google",
+          "type": 0,
+          "linkedId": null
+        }
+      ],
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.google.com/chrome/"
+          }
+        ],
+        "username": "username-chrome",
+        "password": "password-chrome",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+  {
+      "id": "5177e0da-012c-4a59-9f27-476790420e02",
+      "organizationId": null,
+      "folderId": "94353183-eb46-4a87-ac6e-84592df83683",
+      "type": 1,
+      "reprompt": 0,
+      "name": "edge",
+      "notes": null,
+      "favorite": true,
+      "fields": [
+        {
+          "name": "editor",
+          "value": "microsoft",
+          "type": 0,
+          "linkedId": null
+        }
+      ],
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.microsoft.com/en-us/edge"
+          }
+        ],
+        "username": "username-edge",
+        "password": "password-edge",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "5177e0da-012c-4a59-9f27-476790420e03",
+      "organizationId": null,
+      "folderId": "94353183-eb46-4a87-ac6e-84592df83683",
+      "type": 1,
+      "reprompt": 0,
+      "name": "firefox",
+      "notes": null,
+      "favorite": true,
+      "fields": [
+        {
+          "name": "editor",
+          "value": "mozilla",
+          "type": 0,
+          "linkedId": null
+        }
+      ],
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.mozilla.org/en-US/"
+          }
+        ],
+        "username": "username-firefox",
+        "password": "password-firefox",
+        "totp": null
+      },
+      "collectionIds": null
+    }
+  ]
+}

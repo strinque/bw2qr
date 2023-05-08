@@ -28,7 +28,7 @@ For example:
 
 ``` console
 bw2qr.exe --file bitwarden.json \
-              --output file.pdf
+          --pdf file.pdf
 ```
 
 ## Requirements
@@ -120,7 +120,7 @@ Solution Explorer => Project => (executable) => Debug and Launch Settings => src
 
 ``` json
   "args": [
-    "--file \"${ProjectDir}\\model\\bitwarden.json\"", \
-    "--output \"${ProjectDir}\\model\\file.pdf\""
+    "--file \"${ProjectDir}\\model\\bitwarden.json\"",
+    "--pdf \"${ProjectDir}\\model\\file.pdf\""
   ]
 ```

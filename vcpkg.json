@@ -2,6 +2,11 @@
     "name": "bw2qr",
     "version": "1.0.0",
     "dependencies": [
+      "nayuki-qr-code-generator",
+      "openssl",
+      "cpp-httplib",
+      "nlohmann-json",
+      "fmt",
       "winpp"
     ]
 }

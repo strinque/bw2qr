@@ -1,2 +1,6 @@
 .vs
 build
+model/*.json
+model/*.html
+model/*.pdf
+!model/bitwarden.json

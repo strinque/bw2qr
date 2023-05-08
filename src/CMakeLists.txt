@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SOURCE_FILES
   bw2qr.cpp)
 set(HEADER_FILES
-  )
+  html_template.h)
 set(RESOURCE_FILES
   resource.h
   Resource.rc)
@@ -21,13 +21,19 @@ add_executable(${TARGET_EXE} ${SOURCE_FILES} ${HEADER_FILES} ${RESOURCE_FILES})
 set_target_properties(${TARGET_EXE} PROPERTIES OUTPUT_NAME ${TARGET_NAME})
 
 # list of required third-party libraries
+find_package(unofficial-nayuki-qr-code-generator CONFIG REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(httplib CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(winpp CONFIG REQUIRED)
 
 # set project compile definitions
 target_compile_definitions(${TARGET_EXE}
   PRIVATE
-    FMT_HEADER_ONLY)
+    FMT_HEADER_ONLY
+    CPPHTTPLIB_OPENSSL_SUPPORT
+    WIN32_LEAN_AND_MEAN)
 
 # force utf-8 encoding for source-files
 add_compile_options($<$<C_COMPILER_ID:MSVC>:/utf-8>)
@@ -52,6 +58,13 @@ target_link_directories(${TARGET_EXE}
     ${BUILD_PREFIX_PATH}/lib)
 target_link_libraries(${TARGET_EXE}
   PRIVATE
+    $<$<PLATFORM_ID:Windows>:ws2_32>
+    $<$<PLATFORM_ID:Windows>:crypt32>
+    unofficial::nayuki-qr-code-generator::nayuki-qr-code-generator
+    OpenSSL::Crypto
+    OpenSSL::SSL
+    httplib::httplib
+    nlohmann_json::nlohmann_json
     fmt::fmt-header-only
     winpp::winpp)
 
