@@ -14,7 +14,7 @@ set(SOURCE_FILES
 set(HEADER_FILES
   Icon.hpp
   QrCode.h
-  html_template.h)
+  type_mgk.h)
 set(RESOURCE_FILES
   resource.h
   Resource.rc)

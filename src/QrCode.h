@@ -13,7 +13,6 @@ struct entry {
   std::map<std::string, std::string> fields;
 };
 
-// initialize graphicsmagick library using Magick::InitializeMagick() before calling QrCode
 class QrCodeImpl;
 class QrCode final
 {
@@ -28,8 +27,8 @@ public:
   QrCode(const struct entry& entry);
   ~QrCode();
 
-  // generate html qr-code
-  const std::string get_html() const;
+  // generate png image of qrcode in std::string
+  const std::string get() const;
 
 private:
   // pointer to internal implementation

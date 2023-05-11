@@ -11,11 +11,9 @@
 #include <fmt/format.h>
 #include <fmt/color.h>
 #include <nlohmann/json.hpp>
-#include <Magick++.h>
 #include <winpp/console.hpp>
 #include <winpp/parser.hpp>
 #include "QrCode.h"
-#include "html_template.h"
 
 using json = nlohmann::ordered_json;
 
@@ -24,7 +22,7 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "1.2.0";
+const std::string PROGRAM_VERSION = "2.0.0";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
@@ -53,18 +51,10 @@ void exec(const std::string& str, std::function<void()> fct)
   }
 }
 
-// lambda to create indented string
-auto indent = [](const int nb, const std::string& str) -> const std::string {
-  return std::regex_replace(str, std::regex(R"((^[ ]*[<]))"), std::string(nb, ' ') + "$1");
-};
-
 int main(int argc, char** argv)
 {
   // initialize Windows console
   console::init();
-
-  // initialize graphicsmagick library
-  Magick::InitializeMagick(argv[0]);
 
   // parse command-line arguments
   std::filesystem::path json_file;
@@ -142,15 +132,23 @@ int main(int argc, char** argv)
       }
       });
 
-    // generate all qrcodes for entries
+    // generate all qrcodes for entries - store png images
     std::vector<std::string> qrcodes;
     exec("generate all qrcodes", [&]() {
       for (const auto& entry : entries)
-        qrcodes.push_back(QrCode(entry).get_html());
+        qrcodes.push_back(QrCode(entry).get());
       });
+
+    // write as png images for test
+    for (int i = 0; i < qrcodes.size(); ++i)
+    {
+      std::ofstream file(fmt::format("file{}.png", i), std::ios::binary);
+      file << qrcodes.at(i);
+    }
 
     // generate html file
     exec("generate html file", [&]() {
+      /*
       // load html template
       std::string html = html_template;
 
@@ -184,6 +182,7 @@ int main(int argc, char** argv)
       html_file.replace_extension(".html");
       std::ofstream file(html_file, std::ios::binary);
       file << html;
+      */
       });
 
     return 0;
