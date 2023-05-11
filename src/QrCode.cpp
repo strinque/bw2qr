@@ -9,7 +9,9 @@
 #include <qrcodegen.hpp>
 #include <httplib.h>
 #include <nlohmann/json.hpp>
+#include <Magick++.h>
 #include "QrCode.h"
+#include "Icon.hpp"
 
 using json = nlohmann::ordered_json;
 
@@ -23,10 +25,7 @@ class QrCodeImpl final
 {
 public:
   // constructor/destructor
-  QrCodeImpl(const struct entry& entry) :
-    m_entry(entry)
-  {
-  }
+  QrCodeImpl(const struct entry& entry) : m_entry(entry) {}
   ~QrCodeImpl() = default;
 
   // generate the html qr-code
@@ -81,13 +80,16 @@ private:
   const std::string get_img() const
   {
     const std::string& favicon = get_favicon(std::regex_replace(m_entry.url, std::regex(R"(https://)"), ""));
-    return fmt::format("{}\n", "<img />");
+    if (!favicon.empty())
+      return fmt::format(R"(<img src="data:image/png;base64, {}" alt="logo" />)" "\n", favicon);
+    else
+      return fmt::format(R"(<img />)" "\n");
   }
 
   // generate the title which will be displayed at the bottom of qrcode
   const std::string get_title() const
   {
-    return fmt::format("<h1>{}</h1>\n", m_entry.name.substr(0, 16));
+    return fmt::format(R"(<h1>{}</h1>)" "\n", m_entry.name.substr(0, 16));
   }
 
   // convert the qrcode to a svg
@@ -103,8 +105,12 @@ private:
     {
       for (int x = 0; x < qr.getSize(); x++)
       {
-        if (!qr.getModule(x, y))
+        if (qr.getModule(x, y))
+        {
+          if (x || y)
+            svg += " ";
           svg += fmt::format("M{},{}h1v1h-1z", x + border, y + border);
+        }
       }
     }
     svg += R"(" fill="#000000"/>)";
@@ -113,23 +119,62 @@ private:
     return svg;
   }
 
-  // retrieve the favicon
+  // retrieve the favicon as base64
   const std::string get_favicon(const std::string& url) const
   {
-    // download the favicon
-    std::string favicon;
+    try
     {
-      httplib::SSLClient client(url);
-      auto res = client.Get("/favicon.ico");
-      if (!res ||
-          (res->status != 200) ||
-          !res->body.size())
-          return {};
-      favicon = res->body;
+      // set the logo size in px
+      const uint8_t logo_size = 48;
+
+      // download the favicon
+      std::string favicon_ico;
+      {
+        httplib::SSLClient client(url);
+        auto res = client.Get("/favicon.ico");
+        if (!res ||
+            (res->status != 200) ||
+            !res->body.size())
+            return {};
+        favicon_ico = res->body;
+      }
+
+      // extract biggest icon from favicon
+      const auto& icons = icon::get_icons(favicon_ico);
+      if (icons.empty())
+        return {};
+      std::string big_icon;
+      if (icons.find(logo_size) != icons.end())
+        big_icon = icons.find(logo_size)->second;
+      else
+        big_icon = icons.rbegin()->second;
+
+
+      // load the favicon data and resize it
+      Magick::Blob blob_in(big_icon.c_str(), big_icon.size());
+      Magick::Image icon_image;
+      icon_image.magick("ICO");
+      icon_image.read(blob_in);
+      if (icon::get_size(big_icon) != logo_size)
+        icon_image.resize(Magick::Geometry(logo_size, logo_size), Magick::FilterTypes::LanczosFilter);
+
+      // create logo
+      Magick::Image logo(Magick::Geometry(logo_size, logo_size), Magick::Color("transparent"));
+      logo.matte(true);
+      logo.fillColor(Magick::Color("white"));
+      logo.draw(Magick::DrawableRoundRectangle(0, 0, logo_size-1, logo_size-1, 10, 10));
+      logo.composite(icon_image, 0, 0, Magick::OverCompositeOp);
+
+      // convert favicon to base64
+      Magick::Blob blob_out;
+      logo.magick("PNG");
+      logo.write(&blob_out);
+      return blob_out.base64();
     }
-    // resize the favicon
-    // convert favicon to base64
-    return {};
+    catch (const std::exception& ex)
+    {
+      return {};
+    }
   }
 
 private:

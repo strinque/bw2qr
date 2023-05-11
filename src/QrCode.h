@@ -13,6 +13,7 @@ struct entry {
   std::map<std::string, std::string> fields;
 };
 
+// initialize graphicsmagick library using Magick::InitializeMagick() before calling QrCode
 class QrCodeImpl;
 class QrCode final
 {

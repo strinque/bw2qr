@@ -27,6 +27,7 @@ set_target_properties(${TARGET_EXE} PROPERTIES OUTPUT_NAME ${TARGET_NAME})
 find_package(unofficial-nayuki-qr-code-generator CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(httplib CONFIG REQUIRED)
+find_package(unofficial-graphicsmagick CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(winpp CONFIG REQUIRED)
@@ -67,6 +68,7 @@ target_link_libraries(${TARGET_EXE}
     OpenSSL::Crypto
     OpenSSL::SSL
     httplib::httplib
+    unofficial::graphicsmagick::graphicsmagick
     nlohmann_json::nlohmann_json
     fmt::fmt-header-only
     winpp::winpp)

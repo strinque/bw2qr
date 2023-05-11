@@ -11,10 +11,11 @@
 #include <fmt/format.h>
 #include <fmt/color.h>
 #include <nlohmann/json.hpp>
+#include <Magick++.h>
 #include <winpp/console.hpp>
 #include <winpp/parser.hpp>
-#include "html_template.h"
 #include "QrCode.h"
+#include "html_template.h"
 
 using json = nlohmann::ordered_json;
 
@@ -23,7 +24,7 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "1.1.0";
+const std::string PROGRAM_VERSION = "1.2.0";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
@@ -61,6 +62,9 @@ int main(int argc, char** argv)
 {
   // initialize Windows console
   console::init();
+
+  // initialize graphicsmagick library
+  Magick::InitializeMagick(argv[0]);
 
   // parse command-line arguments
   std::filesystem::path json_file;
