@@ -10,12 +10,11 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/color.h>
-#include <qrcodegen.hpp>
-#include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <winpp/console.hpp>
 #include <winpp/parser.hpp>
 #include "html_template.h"
+#include "QrCode.h"
 
 using json = nlohmann::ordered_json;
 
@@ -24,20 +23,10 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "1.0.0";
+const std::string PROGRAM_VERSION = "1.1.0";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
-
-// entry definition with all extracted fields
-struct entry {
-  std::string name;
-  std::string username;
-  std::string password;
-  std::string totp;
-  std::string url;
-  std::map<std::string, std::string> fields;
-};
 
 /*============================================
 | Function definitions
@@ -68,124 +57,6 @@ auto indent = [](const int nb, const std::string& str) -> const std::string {
   return std::regex_replace(str, std::regex(R"((^[ ]*[<]))"), std::string(nb, ' ') + "$1");
 };
 
-// generate qrcode from string
-class QrCode final
-{
-public:
-  // constructor/destructor
-  QrCode(const struct entry& entry) :
-    m_entry(entry)
-  {
-  }
-  ~QrCode() = default;
-
-  // generate the html qr-code
-  const std::string get_html() const
-  {
-    std::string html;
-    html += indent(0, R"(<div class="qrcode">)" "\n");
-    html += indent(2, R"(<div class="frame">)" "\n");
-    html += indent(4, get_svg());
-    html += indent(4, get_img());
-    html += indent(4, get_title());
-    html += indent(2, R"(</div>)" "\n");
-    html += indent(0, R"(</div>)" "\n");
-    return html;
-  }
-
-private:
-  // generate the svg representing the qrcode
-  const std::string get_svg() const
-  {
-    // create json object based on entry
-    json entry;
-    entry["login"] = json::object();
-    entry["login"]["username"] = m_entry.username;
-    entry["login"]["password"] = m_entry.password;
-    entry["login"]["totp"] = m_entry.totp;
-    entry["fields"] = json::array();
-    for (const auto& [k, v] : m_entry.fields)
-    {
-      json field = json::object();
-      field[k] = v;
-      entry["fields"].push_back(field);
-    }
-
-    // serialize json to std::string
-    std::string json_str = entry.dump(2);
-    json_str = std::regex_replace(json_str, std::regex(R"([ ]{4}[{]\s[ ]{6}([^\n]+)\n[ ]{4}[}])"), "    { $1 }");
-    if (json_str.size() > 510)
-      throw std::runtime_error(fmt::format("can't convert '{}' - entry size too big: {}", m_entry.name, json_str.size()));
-
-    // force the length of the json string: 510
-    json_str = fmt::format("{:<510}", json_str);
-
-    // convert to qrcode using qrcodegen library
-    const qrcodegen::QrCode& qr = qrcodegen::QrCode::encodeText(json_str.c_str(), qrcodegen::QrCode::Ecc::HIGH);
-
-    // convert qrcode to svg with 2px border
-    return to_svg(qr, 2);
-  }
-
-  // generate the logo which will be displayed at the middle of qrcode
-  const std::string get_img() const
-  {
-    const std::string& favicon = get_favicon(std::regex_replace(m_entry.url, std::regex(R"(https://)"), ""));
-    return fmt::format("{}\n", "<img />");
-  }
-
-  // generate the title which will be displayed at the bottom of qrcode
-  const std::string get_title() const
-  {
-    return fmt::format("<h1>{}</h1>\n", m_entry.name.substr(0, 16));
-  }
-
-  // convert the qrcode to a svg
-  const std::string to_svg(const qrcodegen::QrCode& qr, const int border) const
-  {
-    std::string svg;
-    svg += fmt::format(R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 {} {}" stroke="none">)",
-      qr.getSize() + border * 2,
-      qr.getSize() + border * 2);
-    svg += R"(  <rect width="100%" height="100%" fill="#FFFFFF"/>)";
-    svg += R"(  <path d=")";
-    for (int y = 0; y < qr.getSize(); y++)
-    {
-      for (int x = 0; x < qr.getSize(); x++)
-      {
-        if (!qr.getModule(x, y))
-          svg += fmt::format("M{},{}h1v1h-1z", x + border, y + border);
-      }
-    }
-    svg += R"(" fill="#000000"/>)";
-    svg += R"(</svg>)";
-    svg = std::regex_replace(svg, std::regex(R"([>])"), ">\n");
-    return svg;
-  }
-
-  // retrieve the favicon
-  const std::string get_favicon(const std::string& url) const
-  {
-    // download the favicon
-    std::string favicon;
-    {
-      httplib::SSLClient client(url);
-      auto res = client.Get("/favicon.ico");
-      if (!res ||
-          (res->status != 200) ||
-          !res->body.size())
-          return {};
-      favicon = res->body;
-    }
-    // resize the favicon
-    // convert favicon to base64
-    return {};
-  }
-
-private:
-  struct entry m_entry;
-};
-
 int main(int argc, char** argv)
 {
   // initialize Windows console
@@ -195,7 +66,7 @@ int main(int argc, char** argv)
   std::filesystem::path json_file;
   std::filesystem::path pdf_file;
   console::parser parser(PROGRAM_NAME, PROGRAM_VERSION);
-  parser.add("f", "file", "path to the bitwarden json file", json_file, true)
+  parser.add("j", "json", "path to the bitwarden json file", json_file, true)
         .add("p", "pdf", "path to the pdf output file", pdf_file, true);
   if (!parser.parse(argc, argv))
   {

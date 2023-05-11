@@ -27,7 +27,7 @@ For example:
 ## Usage
 
 ``` console
-bw2qr.exe --file bitwarden.json \
+bw2qr.exe --json bitwarden.json \
           --pdf file.pdf
 ```
 
@@ -120,7 +120,7 @@ Solution Explorer => Project => (executable) => Debug and Launch Settings => src
 
 ``` json
   "args": [
-    "--file \"${ProjectDir}\\model\\bitwarden.json\"",
+    "--json \"${ProjectDir}\\model\\bitwarden.json\"",
     "--pdf \"${ProjectDir}\\model\\file.pdf\""
   ]
 ```

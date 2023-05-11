@@ -9,8 +9,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # set project source-files
 set(SOURCE_FILES
-  bw2qr.cpp)
+  bw2qr.cpp
+  QrCode.cpp)
 set(HEADER_FILES
+  Icon.hpp
+  QrCode.h
   html_template.h)
 set(RESOURCE_FILES
   resource.h
