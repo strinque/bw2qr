@@ -16,6 +16,7 @@
 #include "QrCode.h"
 #include "Icon.hpp"
 #include "type_mgk.h"
+#include "jbigkit/jbig.h"
 
 using json = nlohmann::ordered_json;
 

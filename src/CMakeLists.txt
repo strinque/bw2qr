@@ -15,12 +15,17 @@ set(HEADER_FILES
   Icon.hpp
   QrCode.h
   type_mgk.h)
+set(JBIGKIT_FILES
+  jbigkit/jbig.c
+  jbigkit/jbig.h
+  jbigkit/jbig_ar.c
+  jbigkit/jbig_ar.h)
 set(RESOURCE_FILES
   resource.h
   Resource.rc)
 
 # compile executable
-add_executable(${TARGET_EXE} ${SOURCE_FILES} ${HEADER_FILES} ${RESOURCE_FILES})
+add_executable(${TARGET_EXE} ${SOURCE_FILES} ${HEADER_FILES} ${JBIGKIT_FILES} ${RESOURCE_FILES})
 set_target_properties(${TARGET_EXE} PROPERTIES OUTPUT_NAME ${TARGET_NAME})
 
 # list of required third-party libraries
@@ -89,5 +94,6 @@ install(TARGETS ${TARGET_EXE} EXPORT ${TARGET_EXE}Config
 # organize files for visual-studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 source_group("Headers Files" FILES ${HEADER_FILES})
+source_group("JBigKit Files" FILES ${JBIGKIT_FILES})
 source_group("Resources Files" FILES ${RESOURCE_FILES})
 source_group("Sources Files" FILES ${SOURCE_FILES})
