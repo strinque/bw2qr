@@ -122,5 +122,17 @@ Solution Explorer => Project => (executable) => Debug and Launch Settings => src
   "args": [
     "--json \"${ProjectDir}\\model\\bitwarden.json\"",
     "--pdf \"${ProjectDir}\\model\\file.pdf\""
+    "--qrcode-module-px-size 3",
+    "--qrcode-border-px-size 3",
+    "--qrcode-module-color \"black\"",
+    "--qrcode-background-color \"white\"",
+    "--frame-border-color \"#485778\"",
+    "--frame-border-width-size 12",
+    "--frame-border-height-size 65",
+    "--frame-border-radius 15",
+    "--frame-logo-size 48",
+    "--frame-font-family \"Arial-Black\"",
+    "--frame-font-color \"white\"",
+    "--frame-font-size 28.0"
   ]
 ```

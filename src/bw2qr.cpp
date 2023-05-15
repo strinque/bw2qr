@@ -22,7 +22,7 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "2.0.1";
+const std::string PROGRAM_VERSION = "2.1.0";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
@@ -59,9 +59,33 @@ int main(int argc, char** argv)
   // parse command-line arguments
   std::filesystem::path json_file;
   std::filesystem::path pdf_file;
+  std::size_t qrcode_module_px_size     = 3;
+  std::size_t qrcode_border_px_size     = 3;
+  std::string qrcode_module_color       = "black";
+  std::string qrcode_background_color   = "white";
+  std::string frame_border_color        = "#485778";
+  std::size_t frame_border_width_size   = 12;
+  std::size_t frame_border_height_size  = 65;
+  std::size_t frame_border_radius       = 15;
+  std::size_t frame_logo_size           = 48;
+  std::string frame_font_family         = "Arial-Black";
+  std::string frame_font_color          = "white";
+  double frame_font_size                = 28.0;
   console::parser parser(PROGRAM_NAME, PROGRAM_VERSION);
-  parser.add("j", "json", "path to the bitwarden json file", json_file, true)
-        .add("p", "pdf", "path to the pdf output file", pdf_file, true);
+  parser.add("j", "json",                     "path to the bitwarden json file",                                                                          json_file, true)
+        .add("p", "pdf",                      "path to the pdf output file",                                                                              pdf_file, true)
+        .add("m", "qrcode-module-px-size",    fmt::format("{:<45}(default: {})", "size in pixels of each QR Code module",     qrcode_module_px_size),     qrcode_module_px_size)
+        .add("o", "qrcode-border-px-size",    fmt::format("{:<45}(default: {})", "size in pixels of the QR Code border",      qrcode_border_px_size),     qrcode_border_px_size)
+        .add("q", "qrcode-module-color",      fmt::format("{:<45}(default: {})", "QR Code module color",                      qrcode_module_color),       qrcode_module_color)
+        .add("k", "qrcode-background-color",  fmt::format("{:<45}(default: {})", "QR Code background color",                  qrcode_background_color),   qrcode_background_color)
+        .add("a", "frame-border-color",       fmt::format("{:<45}(default: {})", "color of the frame",                        frame_border_color),        frame_border_color)
+        .add("w", "frame-border-width-size",  fmt::format("{:<45}(default: {})", "size in pixels of the frame border width",  frame_border_width_size),   frame_border_width_size)
+        .add("e", "frame-border-height-size", fmt::format("{:<45}(default: {})", "size in pixels of the frame border height", frame_border_height_size),  frame_border_height_size)
+        .add("r", "frame-border-radius",      fmt::format("{:<45}(default: {})", "size in pixels of the frame border radius", frame_border_radius),       frame_border_radius)
+        .add("l", "frame-logo-size",          fmt::format("{:<45}(default: {})", "size in pixels of the logo",                frame_logo_size),           frame_logo_size)
+        .add("f", "frame-font-family",        fmt::format("{:<45}(default: {})", "font family of the QR Code name",           frame_font_family),         frame_font_family)
+        .add("c", "frame-font-color",         fmt::format("{:<45}(default: {})", "font color of the QR Code name",            frame_font_color),          frame_font_color)
+        .add("s", "frame-font-size",          fmt::format("{:<45}(default: {})", "size in pixels of the QR Code name font",   frame_font_size),           frame_font_size);
   if (!parser.parse(argc, argv))
   {
     parser.print_usage();
@@ -142,67 +166,34 @@ int main(int argc, char** argv)
       }
       });
 
-    // generate all qrcodes for entries - store png images
+    // generate all QR Codes for entries - store png images
     std::vector<std::string> qrcodes;
     exec("generate all qrcodes", [&]() {
       for (const auto& entry : entries)
         qrcodes.push_back(QrCode(
           {
+            // set the QR Codes data
             option::qrcode_name(entry.name),
             option::qrcode_username(entry.username),
             option::qrcode_password(entry.password),
             option::qrcode_totp(entry.totp),
             option::qrcode_url(entry.url),
             option::qrcode_fields(entry.fields),
-            option::frame_logo_status(true),
-            option::frame_border_color("#485778")
+
+            // set the QR Code stylesheets
+            option::qrcode_module_px_size(qrcode_module_px_size),
+            option::qrcode_border_px_size(qrcode_border_px_size),
+            option::qrcode_module_color(qrcode_module_color),
+            option::qrcode_background_color(qrcode_background_color),
+            option::frame_border_color(frame_border_color),
+            option::frame_border_width_size(frame_border_width_size),
+            option::frame_border_height_size(frame_border_height_size),
+            option::frame_border_radius(frame_border_radius),
+            option::frame_logo_size(frame_logo_size),
+            option::frame_font_family(frame_font_family),
+            option::frame_font_color(frame_font_color),
+            option::frame_font_size(frame_font_size)
           }).get());
-      });
-
-    // write as png images for test
-    for (int i = 0; i < qrcodes.size(); ++i)
-    {
-      std::ofstream file(fmt::format("file{}.png", i), std::ios::binary);
-      file << qrcodes.at(i);
-    }
-
-    // generate html file
-    exec("generate html file", [&]() {
-      /*
-      // load html template
-      std::string html = html_template;
-
-      // construct all html A4 pages - 12 qrcodes per page
-      std::string data;
-      constexpr int qr_per_page = 12;
-      const int nb_pages = static_cast<int>(std::ceil(static_cast<float>(qrcodes.size()) / qr_per_page));
-      if (!nb_pages)
-        throw std::runtime_error("no qrcode marked as 'favorite' as been found");
-      data += indent(4, R"(<div class="document">)" "\n");
-      for (int p = 0; p < nb_pages; ++p)
-      {
-        data += indent(6, R"(<div class="page">)" "\n");
-        for (int q = 0; q < qr_per_page; q++)
-        {
-          const int qr_idx = p * qr_per_page + q;
-          if (qr_idx < qrcodes.size())
-            data += indent(8, qrcodes.at(qr_idx));
-          else
-            data += indent(8, R"(<div class="qrcode" />)" "\n");
-        }
-        data += indent(6, R"(</div>)" "\n");
-      }
-      data += indent(4, R"(</div>)" "\n");
-
-      // inject pages into html
-      html = std::regex_replace(html, std::regex(R"(([ ]+<div class="document" />))"), data);
-
-      // write to file
-      std::filesystem::path html_file = pdf_file;
-      html_file.replace_extension(".html");
-      std::ofstream file(html_file, std::ios::binary);
-      file << html;
-      */
       });
 
     return 0;
