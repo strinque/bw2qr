@@ -22,7 +22,7 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "2.0.0";
+const std::string PROGRAM_VERSION = "2.0.1";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
@@ -75,6 +75,16 @@ int main(int argc, char** argv)
       throw std::runtime_error(fmt::format("invalid bitwarden json file: \"{}\"", json_file.u8string()));
     if (pdf_file.empty() || pdf_file.extension().string() != ".pdf")
       throw std::runtime_error(fmt::format("invalid output filename: \"{}\"", pdf_file.u8string()));
+
+    // entry definition with all extracted fields
+    struct entry {
+      std::string name;
+      std::string username;
+      std::string password;
+      std::string totp;
+      std::string url;
+      std::map<std::string, std::string> fields;
+    };
 
     // parse bitwarden json file
     std::vector<struct entry> entries;
@@ -136,7 +146,17 @@ int main(int argc, char** argv)
     std::vector<std::string> qrcodes;
     exec("generate all qrcodes", [&]() {
       for (const auto& entry : entries)
-        qrcodes.push_back(QrCode(entry).get());
+        qrcodes.push_back(QrCode(
+          {
+            option::qrcode_name(entry.name),
+            option::qrcode_username(entry.username),
+            option::qrcode_password(entry.password),
+            option::qrcode_totp(entry.totp),
+            option::qrcode_url(entry.url),
+            option::qrcode_fields(entry.fields),
+            option::frame_logo_status(true),
+            option::frame_border_color("#485778")
+          }).get());
       });
 
     // write as png images for test

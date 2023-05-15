@@ -2,16 +2,7 @@
 #include <map>
 #include <string>
 #include <memory>
-
-// entry definition with all extracted fields
-struct entry {
-  std::string name;
-  std::string username;
-  std::string password;
-  std::string totp;
-  std::string url;
-  std::map<std::string, std::string> fields;
-};
+#include "QrCodeOpts.h"
 
 class QrCodeImpl;
 class QrCode final
@@ -24,7 +15,7 @@ class QrCode final
 
 public:
   // constructor/destructor
-  QrCode(const struct entry& entry);
+  QrCode(const std::initializer_list<details::OptionsVal>& opts);
   ~QrCode();
 
   // generate png image of qrcode in std::string

@@ -14,6 +14,7 @@ set(SOURCE_FILES
 set(HEADER_FILES
   Icon.hpp
   QrCode.h
+  QrCodeOpts.h
   type_mgk.h)
 set(JBIGKIT_FILES
   jbigkit/jbig.c
