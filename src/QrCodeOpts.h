@@ -134,6 +134,13 @@ namespace details
     Options(const std::initializer_list<OptionsVal>& opts) :
       m_opts()
     {
+      setArgs(opts);
+    }
+    ~Options() = default;
+
+    // set a list of options
+    void setArgs(const std::initializer_list<OptionsVal>& opts)
+    {
       for (const auto& o : opts)
       {
         if      (std::holds_alternative<option::qrcode_name>(o))              setArg(option_id::qrcode_name,              std::get<option::qrcode_name>(o).arg);
@@ -157,7 +164,6 @@ namespace details
         else throw std::runtime_error("invalid option given");
       }
     }
-    ~Options() = default;
 
     // get the option value from the map
     template<typename T>

@@ -24,6 +24,14 @@ For example:
     All **qrcode** are using the version: `33` with ecc: `high` (up to 30% of redondancy).  
     Thus, the maximum size of data that can be embedded in each **qrcode**: `511` bytes.
 
+List of **c++ libraries** used in this project:
+
+- `nlohmann-json`: handles `json` file parsing
+- `cpp-httplib`: https library used to get the favicon of websites to add them in the QR Code
+- `nayuki-qr-code-generator`: generates the QR Code
+- `graphicsmagick`: helps to create the QR Code png image
+- `PoDoFo`: create `PDF` file
+
 ## Usage
 
 ``` console

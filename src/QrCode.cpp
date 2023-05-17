@@ -93,20 +93,26 @@ public:
       },
       missing_ids))
     {
-      std::string err = "missing mandatory argument:\n";
+      std::string err = "missing mandatory argument: ";
       err += "[ ";
       for(const auto& ids: missing_ids)
         err += fmt::format("{}{} ", 
           details::option_name.at(ids), 
           (&ids != &missing_ids.back()) ? "," : "");
-      err += "]\n";
+      err += "]";
       throw std::runtime_error(err);
     }
   }
   ~QrCodeImpl() = default;
 
+  // set a list of options
+  void set(const std::initializer_list<details::OptionsVal>& opts)
+  {
+    m_options.setArgs(opts);
+  }
+
   // generate png image of qrcode in std::string
-  const std::string get() const
+  const struct PngImage get() const
   {
     // generate the json text for this entry
     //  json string will always have the same size
@@ -169,10 +175,16 @@ public:
     full.composite(text, (frame.columns() - text.columns()) / 2 , frame_border_width_size + qrcode.rows() + (frame_border_height_size - text.rows()) / 2, MagickLib::OverCompositeOp);
     full.magick("PNG");
 
-    // convert png to std::string
+    // convert image to blob data
     Magick::Blob blob;
     full.write(&blob);
-    return std::string(static_cast<const char*>(blob.data()), blob.length());
+
+    // create PngImage
+    struct PngImage img;
+    img.width = full.columns();
+    img.height = full.rows();
+    img.data.assign(static_cast<const char*>(blob.data()), blob.length());
+    return img;
   }
 
 private:
@@ -389,4 +401,5 @@ private:
 // separate interface from implementation
 QrCode::QrCode(const std::initializer_list<details::OptionsVal>& opts) : m_pimpl(std::make_unique<QrCodeImpl>(opts)) {}
 QrCode::~QrCode() = default;
-const std::string QrCode::get() const { return m_pimpl ? m_pimpl->get() : ""; }
+void QrCode::set(const std::initializer_list<details::OptionsVal>& opts) { if (m_pimpl) m_pimpl->set(opts); }
+const struct PngImage QrCode::get() const { return m_pimpl ? m_pimpl->get() : struct PngImage(); }

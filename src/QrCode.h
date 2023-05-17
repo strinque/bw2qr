@@ -4,6 +4,13 @@
 #include <memory>
 #include "QrCodeOpts.h"
 
+struct PngImage
+{
+  std::size_t width = 0;
+  std::size_t height = 0;
+  std::string data;
+};
+
 class QrCodeImpl;
 class QrCode final
 {
@@ -18,8 +25,11 @@ public:
   QrCode(const std::initializer_list<details::OptionsVal>& opts);
   ~QrCode();
 
-  // generate png image of qrcode in std::string
-  const std::string get() const;
+  // set a list of options
+  void set(const std::initializer_list<details::OptionsVal>& opts);
+
+  // generate a QR Code in a PNG image
+  const struct PngImage get() const;
 
 private:
   // pointer to internal implementation
