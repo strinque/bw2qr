@@ -15,6 +15,10 @@
 #include <fmt/format.h>
 #include <fmt/color.h>
 #include <nlohmann/json.hpp>
+#pragma warning( push )
+#pragma warning( disable: 4005 )
+#include <podofo/podofo.h>
+#pragma warning( pop )
 #include <winpp/console.hpp>
 #include <winpp/parser.hpp>
 #include <winpp/progress-bar.hpp>
@@ -27,7 +31,7 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "2.2.0";
+const std::string PROGRAM_VERSION = "2.3.0";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
@@ -135,7 +139,7 @@ int main(int argc, char** argv)
   std::size_t qrcode_border_px_size     = 3;
   std::string qrcode_module_color       = "black";
   std::string qrcode_background_color   = "white";
-  std::string frame_border_color        = "#485778";
+  std::string frame_border_color        = "#054080";
   std::size_t frame_border_width_size   = 12;
   std::size_t frame_border_height_size  = 65;
   std::size_t frame_border_radius       = 15;
@@ -143,6 +147,8 @@ int main(int argc, char** argv)
   std::string frame_font_family         = "Arial-Black";
   std::string frame_font_color          = "white";
   double frame_font_size                = 28.0;
+  std::size_t pdf_cols                  = 4;
+  std::size_t pdf_rows                  = 5;
   console::parser parser(PROGRAM_NAME, PROGRAM_VERSION);
   parser.add("j", "json",                     "path to the bitwarden json file",                                                                          json_file, true)
         .add("p", "pdf",                      "path to the pdf output file",                                                                              pdf_file, true)
@@ -157,7 +163,9 @@ int main(int argc, char** argv)
         .add("l", "frame-logo-size",          fmt::format("{:<45}(default: {})", "size in pixels of the logo",                frame_logo_size),           frame_logo_size)
         .add("f", "frame-font-family",        fmt::format("{:<45}(default: {})", "font family of the QR Code name",           frame_font_family),         frame_font_family)
         .add("c", "frame-font-color",         fmt::format("{:<45}(default: {})", "font color of the QR Code name",            frame_font_color),          frame_font_color)
-        .add("s", "frame-font-size",          fmt::format("{:<45}(default: {})", "size in pixels of the QR Code name font",   frame_font_size),           frame_font_size);
+        .add("s", "frame-font-size",          fmt::format("{:<45}(default: {})", "size in pixels of the QR Code name font",   frame_font_size),           frame_font_size)
+        .add("x", "pdf-cols",                 fmt::format("{:<45}(default: {})", "number of columns of QR Codes in pdf",      pdf_cols),                  pdf_cols)
+        .add("y", "pdf-rows",                 fmt::format("{:<45}(default: {})", "number of rows of QR Codes in pdf",         pdf_rows),                  pdf_rows);
   if (!parser.parse(argc, argv))
   {
     parser.print_usage();
@@ -283,14 +291,76 @@ int main(int argc, char** argv)
         throw std::runtime_error(qr_failures);
     }
 
-    // write QR Code png images to files
-    exec("write QR Code png images to files", [&]() {
+    // write QR Codes to pdf file
+    exec("write QR Codes to PDF file", [&]() {
+      PoDoFo::PdfError::EnableDebug(false);
+      PoDoFo::PdfMemDocument pdf;
+
+      // create the A4 pdf pages
+      const std::size_t qr_per_pages = pdf_cols * pdf_rows;
+      const std::size_t nb_pages = std::ceil(static_cast<double>(qr_images.size()) / qr_per_pages);
+      std::size_t page_width = 0;
+      std::size_t page_height = 0;
+      for (int i = 0; i < nb_pages; ++i)
+      {
+        PoDoFo::PdfPage* page = pdf.CreatePage(PoDoFo::PdfPage::CreateStandardPageSize(PoDoFo::ePdfPageSize_A4));
+        if (!page)
+          throw std::runtime_error("can't create pdf page");
+        page_width = page->GetPageSize().GetWidth();
+        page_height = page->GetPageSize().GetHeight();
+      }
+
+      // get the size of QR Codes images
+      std::size_t img_width = 0;
+      std::size_t img_height = 0;
+      const double scale = 72.0 / 300.0;
       for (const auto& [k, v] : qr_images)
       {
-        std::ofstream file(fmt::format("qr_{}.png", k), std::ios::binary);
-        if (file)
-          file.write(v.data.c_str(), v.data.size());
+        img_width = v.width * scale;
+        img_height = v.height * scale;
+        break;
       }
+
+      // calc margin size
+      const std::size_t margin_width = (page_width - (pdf_cols * img_width)) / (pdf_cols + 1);
+      const std::size_t margin_height = (page_height - (pdf_rows * img_height)) / (pdf_rows + 1);
+
+      // add QR Codes png images to A4 pdf pages
+      std::size_t qr_idx = 0;
+      for (const auto& [k, v]: qr_images)
+      {
+        // calc QR Codes position
+        const std::size_t qx = (qr_idx % qr_per_pages) % pdf_cols;
+        const std::size_t qy = (qr_idx % qr_per_pages) / pdf_cols;
+        const double px = ((qx + 1) * margin_width + (qx * img_width));
+        const double py = page_height - ((qy + 1) * (margin_height + img_height));
+
+        // draw QR Codes on pdf
+        const std::size_t current_page = qr_idx / qr_per_pages;
+        PoDoFo::PdfPage* page = pdf.GetPage(current_page);
+        if (!page)
+          throw std::runtime_error(fmt::format("can't access pdf page: {}", current_page));
+        PoDoFo::PdfImage img(&pdf);
+        img.LoadFromPngData(reinterpret_cast<const unsigned char*>(v.data.c_str()), v.data.size());
+        PoDoFo::PdfPainter painter;
+        painter.SetPage(page);
+        painter.DrawImage(px,
+                          py,
+                          &img,
+                          scale,
+                          scale);
+        painter.FinishPage();
+        ++qr_idx;
+      }
+
+      // write pdf to disk
+      if (std::filesystem::exists(pdf_file))
+      {
+        std::ofstream file(pdf_file);
+        if (!file.is_open())
+          throw std::runtime_error(fmt::format("can't write to file: \"{}\" - already open?", pdf_file.u8string()));
+      }
+      pdf.Write(pdf_file.string().c_str());
       });
 
     return 0;

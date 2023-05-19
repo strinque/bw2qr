@@ -35,6 +35,7 @@ find_package(OpenSSL REQUIRED)
 find_package(httplib CONFIG REQUIRED)
 find_package(unofficial-graphicsmagick CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(PoDoFo CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(winpp CONFIG REQUIRED)
 
@@ -76,6 +77,8 @@ target_link_libraries(${TARGET_EXE}
     httplib::httplib
     unofficial::graphicsmagick::graphicsmagick
     nlohmann_json::nlohmann_json
+    $<$<CONFIG:Debug>:podofo_shared>
+    $<$<NOT:$<CONFIG:Debug>>:podofo_static>
     fmt::fmt-header-only
     winpp::winpp)
 
