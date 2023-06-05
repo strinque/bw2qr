@@ -1,12 +1,27 @@
-# bw2qr
+# bw2qr 🔒
 
 ## Introduction
-This project is a c++ program that allows you to convert an exported `json` vault file from **bitwarden** or **vaultwarden** into a printable `pdf` file. This can be useful for securely storing all of your passwords in one place. In addition, the program uses **qrcode** with high redundancy mode to print each entry, which helps to recover damaged entries.
 
-The program reads a **bitwarden** or **vaultwarden** `json` file and export specific entries that are tagged as `favorite` as **qrcode** exported in a `pdf` format. The exported entries include important login information such as the *username*, *password*, *authenticator key*, and *added custom fields*.
+The **bw2qr** **c++** application allows users to convert an exported `json` vault file from **bitwarden** or **vaultwarden** into a printable `pdf` file. This can be useful for securely storing all of your passwords in one place. The program uses **qrcode** with high redundancy mode to print each entry, which helps to recover damaged entries.  
+Implemented in c++17 and use `vcpkg`/`cmake` for the build-system.  
 
-Once the **qrcode** is scanned, it can be read as text and includes all of the important login information in a readable format.  
+It uses the `winpp` header-only library from: https://github.com/strinque/winpp.
+
+## Features
+
+- [x] handle command-line argument variables
+- [x] use `nlohmann/json` header-only library for `json` parsing
+- [x] use `cpp-httplib` to get the favicon of websites to add them in the QR Code
+- [x] use `nayuki-qr-code-generator` to generate QR Code
+- [x] use `graphicsmagick` to create QR Code png image and frame
+- [x] use `PoDoFo` to create the `pdf` file
+
+## Description
+The program reads a **bitwarden** or **vaultwarden** `json` file and export specific entries that are tagged as `favorite` as **qrcode** exported in a `pdf` file. The exported entries include important login information such as *username*, *password*, *authenticator key*, and *custom fields*.
+
+Once the **qrcode** is scanned, it can be read as text and includes all of the important login information in a `json` readable format.  
 For example:
+
 ``` json
 {
   "login": {
@@ -21,18 +36,29 @@ For example:
 ```
 
 !!! tip
-    All **qrcode** are using the version: `33` with ecc: `high` (up to 30% of redondancy).  
+    All **qrcode** are using the algorithm version: `33` with ecc: `high` (up to 30% of redondancy).  
     Thus, the maximum size of data that can be embedded in each **qrcode**: `511` bytes.
 
-List of **c++ libraries** used in this project:
-
-- `nlohmann-json`: handles `json` file parsing
-- `cpp-httplib`: https library used to get the favicon of websites to add them in the QR Code
-- `nayuki-qr-code-generator`: generates the QR Code
-- `graphicsmagick`: helps to create the QR Code png image
-- `PoDoFo`: create `PDF` file
-
 ## Usage
+
+Arguments:
+
+- `--json`:                       path to the bitwarden json file                                       [mandatory]
+- `--pdf`:                        path to the pdf output file                                           [mandatory]
+- `--qrcode-module-px-size`:      size in pixels of each QR Code module        (default: 3)
+- `--qrcode-border-px-size`:      size in pixels of the QR Code border         (default: 3)
+- `--qrcode-module-color`:        QR Code module color                         (default: black)
+- `--qrcode-background-color`:    QR Code background color                     (default: white)
+- `--frame-border-color`:         color of the frame                           (default: #054080)
+- `--frame-border-width-size`:    size in pixels of the frame border width     (default: 12)
+- `--frame-border-height-size`:   size in pixels of the frame border height    (default: 65)
+- `--frame-border-radius`:        size in pixels of the frame border radius    (default: 15)
+- `--frame-logo-size`:            size in pixels of the logo                   (default: 48)
+- `--frame-font-family`:          font family of the QR Code name              (default: Arial-Black)
+- `--frame-font-color`:           font color of the QR Code name               (default: white)
+- `--frame-font-size`:            size in pixels of the QR Code name font      (default: 28)
+- `--pdf-cols`:                   number of columns of QR Codes in pdf         (default: 4)
+- `--pdf-rows`:                   number of rows of QR Codes in pdf            (default: 5)
 
 ``` console
 bw2qr.exe --json bitwarden.json \
