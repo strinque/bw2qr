@@ -7,6 +7,17 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+namespace qr
+{
+  enum class ecc
+  {
+    low,      // 7%
+    medium,   // 15%
+    quartile, // 25%
+    high      // 30%
+  };
+}
+
 namespace details
 {
   // list of option id
@@ -15,6 +26,7 @@ namespace details
     qrcode_title,
     qrcode_data,
     qrcode_url,
+    qrcode_ecc,
     qrcode_module_px_size,
     qrcode_border_px_size,
     qrcode_module_color,
@@ -33,6 +45,7 @@ namespace details
     {option_id::qrcode_title,             "qrcode-title"},
     {option_id::qrcode_data,              "qrcode-data"},
     {option_id::qrcode_url,               "qrcode-url"},
+    {option_id::qrcode_ecc,               "qrcode-ecc"},
     {option_id::qrcode_module_px_size,    "qrcode-module-px-size"},
     {option_id::qrcode_border_px_size,    "qrcode-border-px-size"},
     {option_id::qrcode_module_color,      "qrcode-module-color"},
@@ -76,6 +89,7 @@ namespace option
   using qrcode_title              = details::option_data<details::option_id::qrcode_title,              std::string>;
   using qrcode_data               = details::option_data<details::option_id::qrcode_data,               std::string>;
   using qrcode_url                = details::option_data<details::option_id::qrcode_url,                std::string>;
+  using qrcode_ecc                = details::option_data<details::option_id::qrcode_ecc,                qr::ecc>;
   using qrcode_module_px_size     = details::option_data<details::option_id::qrcode_module_px_size,     std::size_t>;
   using qrcode_border_px_size     = details::option_data<details::option_id::qrcode_border_px_size,     std::size_t>;
   using qrcode_module_color       = details::option_data<details::option_id::qrcode_module_color,       std::string>;
@@ -98,6 +112,7 @@ namespace details
       option::qrcode_title,
       option::qrcode_data,
       option::qrcode_url,
+      option::qrcode_ecc,
       option::qrcode_module_px_size,
       option::qrcode_border_px_size,
       option::qrcode_module_color,
@@ -113,7 +128,7 @@ namespace details
     >;
 
   // variant which contains all the different options data types
-  using OptionsType = std::variant<std::string, std::size_t, double>;
+  using OptionsType = std::variant<std::string, std::size_t, double, qr::ecc>;
 
   // store all the different options
   class Options final
@@ -134,6 +149,7 @@ namespace details
         if      (std::holds_alternative<option::qrcode_title>(o))             setArg(option_id::qrcode_title,             std::get<option::qrcode_title>(o).arg);
         else if (std::holds_alternative<option::qrcode_data>(o))              setArg(option_id::qrcode_data,              std::get<option::qrcode_data>(o).arg);
         else if (std::holds_alternative<option::qrcode_url>(o))               setArg(option_id::qrcode_url,               std::get<option::qrcode_url>(o).arg);
+        else if (std::holds_alternative<option::qrcode_ecc>(o))               setArg(option_id::qrcode_ecc,               std::get<option::qrcode_ecc>(o).arg);
         else if (std::holds_alternative<option::qrcode_module_px_size>(o))    setArg(option_id::qrcode_module_px_size,    std::get<option::qrcode_module_px_size>(o).arg);
         else if (std::holds_alternative<option::qrcode_border_px_size>(o))    setArg(option_id::qrcode_border_px_size,    std::get<option::qrcode_border_px_size>(o).arg);
         else if (std::holds_alternative<option::qrcode_module_color>(o))      setArg(option_id::qrcode_module_color,      std::get<option::qrcode_module_color>(o).arg);

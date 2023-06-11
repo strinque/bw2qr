@@ -16,6 +16,9 @@ set(HEADER_FILES
   QrCode.h
   QrCodeOpts.h
   type_mgk.h)
+set(OPENSSL_FILES
+  openssl-aes.hpp
+  openssl-base64.hpp)
 set(JBIGKIT_FILES
   jbigkit/jbig.c
   jbigkit/jbig.h
@@ -26,7 +29,7 @@ set(RESOURCE_FILES
   Resource.rc)
 
 # compile executable
-add_executable(${TARGET_EXE} ${SOURCE_FILES} ${HEADER_FILES} ${JBIGKIT_FILES} ${RESOURCE_FILES})
+add_executable(${TARGET_EXE} ${SOURCE_FILES} ${HEADER_FILES} ${OPENSSL_FILES} ${JBIGKIT_FILES} ${RESOURCE_FILES})
 set_target_properties(${TARGET_EXE} PROPERTIES OUTPUT_NAME ${TARGET_NAME})
 
 # list of required third-party libraries
@@ -101,6 +104,7 @@ install(TARGETS ${TARGET_EXE} EXPORT ${TARGET_EXE}Config
 # organize files for visual-studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 source_group("Headers Files" FILES ${HEADER_FILES})
+source_group("OpenSSL Files" FILES ${OPENSSL_FILES})
 source_group("JBigKit Files" FILES ${JBIGKIT_FILES})
 source_group("Resources Files" FILES ${RESOURCE_FILES})
 source_group("Sources Files" FILES ${SOURCE_FILES})

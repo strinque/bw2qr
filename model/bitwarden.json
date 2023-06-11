@@ -15,7 +15,7 @@
       "reprompt": 0,
       "name": "chrome",
       "notes": null,
-      "favorite": true,
+      "favorite": false,
       "fields": [
       {
           "name": "editor",
@@ -75,7 +75,7 @@
       "reprompt": 0,
       "name": "firefox",
       "notes": null,
-      "favorite": true,
+      "favorite": false,
       "fields": [
         {
           "name": "editor",

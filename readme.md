@@ -1,22 +1,27 @@
-# bw2qr 🔒
+# 🔒 bw2qr 🔒
 
 ## Introduction
 
-The **bw2qr** **c++** application allows users to convert an exported `json` vault file from **bitwarden** or **vaultwarden** into a printable `pdf` file. This can be useful for securely storing all of your passwords in one place. The program uses **qrcode** with high redundancy mode to print each entry, which helps to recover damaged entries. It also checks the validity of the generated **qrcode** by trying to decode it using `opencv` library.  
+The **bw2qr** application, written in **C++** and hosted on GitHub, enables users to convert a JSON vault file exported from **Bitwarden** or **Vaultwarden** into a printable PDF file. With its offline functionality, this **C++** desktop application ensures enhanced security and data isolation, making it a reliable solution for securely storing passwords. The program utilizes **qrcode** with high redundancy mode for printing entries, offering the ability to recover damaged data, and verifies the validity of generated qrcode using the `opencv` library.  
+
+This application incorporates the **AES-256-CBC** algorithm to encrypt the data of the qrcode when the `--password` command-line option is set. This encryption enhances the security of the generated qrcode by providing robust data protection.  
 
 Implemented in c++17 and use `vcpkg`/`cmake` for the build-system.  
-
-It uses the `winpp` header-only library from: https://github.com/strinque/winpp.
+It uses the `winpp` header-only library from: https://github.com/strinque/winpp.  
 
 ## Features
 
-- [x] handle command-line argument variables
+- [x] use `winpp` to handle command-line argument variables
 - [x] use `nlohmann/json` header-only library for `json` parsing
 - [x] use `cpp-httplib` to get the favicon of websites to add them in the QR Code
 - [x] use `nayuki-qr-code-generator` to generate QR Code
 - [x] use `graphicsmagick` to create QR Code png image and frame
 - [x] use `PoDoFo` to create the `pdf` file
 - [x] use `opencv` to check the validity of the QR Code
+- [x] use `openssl` to encrypt QR Code with **AES 256 CBC** algorithm
+
+!!! note
+    When it comes to handling passwords and vaults, it is crucial to prioritize security and avoid trusting any applications or websites that may compromise your credentials. The **bw2qr** application prioritizes security by operating in full offline mode by default, eliminating the risk of interception or unauthorized storage. However, if you specify the command-line option `--frame-logo-size 64`, it will retrieve the `favicon` and position it at the center of the qrcode, providing an additional visual element.
 
 ## Description
 The program reads a **bitwarden** or **vaultwarden** `json` file and export specific entries that are tagged as `favorite` as **qrcode** exported in a `pdf` file. The exported entries include important login information such as *username*, *password*, *authenticator key*, and *custom fields*.
@@ -38,8 +43,11 @@ For example:
 ```
 
 !!! tip
-    All **qrcode** are using the algorithm version: `33` with ecc: `high` (up to 30% of redondancy).  
-    Thus, the maximum size of data that can be embedded in each **qrcode**: `511` bytes.
+    All **qrcode** are using the algorithm version: `24` with ecc: `high` (up to 30% of redondancy).  
+    Thus, the maximum size of data that can be embedded in each **qrcode**: `511` bytes (or `511 - 16 = 495` bytes with encryption).
+
+!!! note To Decrypt QR Code
+    To decrypt an encrypted QR Code with **AES-256-CBC** algorithm (when a password has been set), prefer using an offline application such as **Cryptography Tool [AES256/CBC]** on **Android**. Otherwise, use the following websites [https://encode-decode.com/aes-256-cbc-encrypt-online](https://encode-decode.com/aes-256-cbc-encrypt-online) or [https://www.toolnb.com/tools-lang-en/aesEnDe.html](https://www.toolnb.com/tools-lang-en/aesEnDe.html).
 
 ## Usage
 
@@ -47,6 +55,7 @@ Arguments:
 
 - `--json`:                       path to the bitwarden json file                                       [mandatory]
 - `--pdf`:                        path to the pdf output file                                           [mandatory]
+- `--password`:                   set a password to encrypt QR Code data using AES-256-CBC
 - `--qrcode-module-px-size`:      size in pixels of each QR Code module        (default: 3)
 - `--qrcode-border-px-size`:      size in pixels of the QR Code border         (default: 3)
 - `--qrcode-module-color`:        QR Code module color                         (default: black)
@@ -62,6 +71,7 @@ Arguments:
 - `--pdf-cols`:                   number of columns of QR Codes in pdf         (default: 4)
 - `--pdf-rows`:                   number of rows of QR Codes in pdf            (default: 5)
 
+T
 ``` console
 bw2qr.exe --json bitwarden.json \
           --pdf file.pdf \
