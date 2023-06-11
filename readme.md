@@ -55,7 +55,7 @@ Arguments:
 - `--frame-border-width-size`:    size in pixels of the frame border width     (default: 12)
 - `--frame-border-height-size`:   size in pixels of the frame border height    (default: 65)
 - `--frame-border-radius`:        size in pixels of the frame border radius    (default: 15)
-- `--frame-logo-size`:            size in pixels of the logo                   (default: 48)
+- `--frame-logo-size`:            size in pixels of the logo                   (default: 0)
 - `--frame-font-family`:          font family of the QR Code name              (default: Arial-Black)
 - `--frame-font-color`:           font color of the QR Code name               (default: white)
 - `--frame-font-size`:            size in pixels of the QR Code name font      (default: 28)
@@ -64,7 +64,8 @@ Arguments:
 
 ``` console
 bw2qr.exe --json bitwarden.json \
-          --pdf file.pdf
+          --pdf file.pdf \
+          --frame-logo-size 64
 ```
 
 ## Requirements
@@ -166,7 +167,7 @@ Solution Explorer => Project => (executable) => Debug and Launch Settings => src
     "--frame-border-width-size 12",
     "--frame-border-height-size 65",
     "--frame-border-radius 15",
-    "--frame-logo-size 48",
+    "--frame-logo-size 64",
     "--frame-font-family \"Arial-Black\"",
     "--frame-font-color \"white\"",
     "--frame-font-size 28.0",

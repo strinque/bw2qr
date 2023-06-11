@@ -32,7 +32,7 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "2.5.0";
+const std::string PROGRAM_VERSION = "2.5.1";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
   std::size_t frame_border_width_size   = 12;
   std::size_t frame_border_height_size  = 65;
   std::size_t frame_border_radius       = 15;
-  std::size_t frame_logo_size           = 48;
+  std::size_t frame_logo_size           = 0;
   std::string frame_font_family         = "Arial-Black";
   std::string frame_font_color          = "white";
   double frame_font_size                = 28.0;

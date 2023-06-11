@@ -199,6 +199,7 @@ private:
     // create QR Code with borders and with border-radius
     const std::size_t img_size = png.rows() + (border_px_size * module_px_size * 2);
     Magick::Image qrcode(Magick::Geometry(img_size, img_size), Magick::Color("transparent"));
+    qrcode.antiAlias(true);
     qrcode.draw({ 
       Magick::DrawableFillColor(GraphicsMagick::GetColor(background_color)),
       Magick::DrawableRoundRectangle(0, 0, img_size - 1, img_size - 1, 10, 10)
@@ -255,13 +256,25 @@ private:
       if (icon::get_size(big_icon) != logo_size)
         icon_image.resize(Magick::Geometry(logo_size, logo_size), Magick::FilterTypes::LanczosFilter);
 
-      // create logo
-      Magick::Image logo(Magick::Geometry(logo_size, logo_size), Magick::Color("transparent"));
-      logo.draw({
+      // create a mask of a rounded icon with white background
+      Magick::Image mask(Magick::Geometry(logo_size, logo_size), Magick::Color("transparent"));
+      mask.antiAlias(true);
+      mask.draw({
         Magick::DrawableFillColor(GraphicsMagick::GetColor(Magick::Color("white"))),
         Magick::DrawableRoundRectangle(0, 0, logo_size - 1, logo_size - 1, 10, 10)
         });
-      logo.composite(icon_image, 0, 0, MagickLib::OverCompositeOp);
+      mask.magick("PNG");
+
+      // apply the mask on the icon
+      Magick::Image icon_logo(Magick::Geometry(logo_size, logo_size), Magick::Color("transparent"));
+      icon_logo.composite(mask, 0, 0, MagickLib::OverCompositeOp);
+      icon_logo.composite(icon_image, 0, 0, MagickLib::InCompositeOp);
+      icon_logo.magick("PNG");
+
+      // create the logo by assembling the mask with the transparent rounded icon
+      Magick::Image logo(Magick::Geometry(logo_size, logo_size), Magick::Color("transparent"));
+      logo.composite(mask, 0, 0, MagickLib::OverCompositeOp);
+      logo.composite(icon_logo, 0, 0, MagickLib::OverCompositeOp);
       logo.magick("PNG");
       return logo;
     }
@@ -299,6 +312,7 @@ private:
 
     // write text in this bounding box
     Magick::Image text(Magick::Geometry(metrics.textWidth(), static_cast<int>(font_size)), Magick::Color("transparent"));
+    text.antiAlias(true);
     text.draw({
       Magick::DrawableFont(font_family),
       Magick::DrawableFillColor(GraphicsMagick::GetColor(font_color)),
@@ -325,6 +339,7 @@ private:
     const std::size_t width = qr_width + frame_border_width_size * 2.0;
     const std::size_t height = qr_height + frame_border_width_size + frame_border_height_size;
     Magick::Image frame(Magick::Geometry(width, height), Magick::Color("transparent"));
+    frame.antiAlias(true);
     frame.draw({
       Magick::DrawableFillColor(GraphicsMagick::GetColor(frame_color)),
       Magick::DrawableRoundRectangle(0, 0, width - 1, height - 1, frame_border_radius, frame_border_radius)
