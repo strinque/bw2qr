@@ -21,6 +21,7 @@
 #pragma warning( pop )
 #include <winpp/console.hpp>
 #include <winpp/parser.hpp>
+#include <winpp/utf8.hpp>
 #include <winpp/progress-bar.hpp>
 #include "QrCode.h"
 
@@ -31,19 +32,16 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "2.4.0";
+const std::string PROGRAM_VERSION = "2.4.1";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
 
-// entry definition with all extracted fields
-struct entry {
-  std::string name;
-  std::string username;
-  std::string password;
-  std::string totp;
+// qrcode properties
+struct qr_entry {
+  std::string title;
+  std::string data;
   std::string url;
-  std::map<std::string, std::string> fields;
 };
 
 /*============================================
@@ -72,8 +70,8 @@ void exec(const std::string& str, std::function<void()> fct)
 
 // create QR Code (called by threads)
 void create_qr_code(std::mutex& mutex,
-                    std::queue<struct entry>& entries,
                     std::map<std::string, struct PngImage>& qr_images,
+                    std::queue<struct qr_entry>& qr_entries,
                     const std::initializer_list<details::OptionsVal>& qr_stylesheet,
                     std::string& qr_failures,
                     console::progress_bar& progress_bar)
@@ -81,26 +79,31 @@ void create_qr_code(std::mutex& mutex,
   while (true)
   {
     // take one element from the queue - protected by mutex
-    struct entry entry;
+    struct qr_entry entry;
     {
       std::lock_guard<std::mutex> lck(mutex);
-      if (entries.empty())
+      if (qr_entries.empty())
         break;
-      entry = entries.front();
-      entries.pop();
+      entry = qr_entries.front();
+      qr_entries.pop();
     }
 
     // create the QR Code
     try
     {
-      // set the QR Code properties
+      // check that the size of the QR Code data
+      if (entry.data.size() > 510)
+        throw std::runtime_error(fmt::format("entry size too big: {}", entry.data.size()));
+
+      // force the length of the json string: 510
+      //  in order to always have QR Code of the same class/size
+      entry.data = fmt::format("{:<510}", entry.data);
+
+      // set QR Code properties and stylesheet
       QrCode qrcode({
-        option::qrcode_name(entry.name),
-        option::qrcode_username(entry.username),
-        option::qrcode_password(entry.password),
-        option::qrcode_totp(entry.totp),
-        option::qrcode_url(entry.url),
-        option::qrcode_fields(entry.fields)
+        option::qrcode_title(entry.title),
+        option::qrcode_data(entry.data),
+        option::qrcode_url(entry.url)
         });
       qrcode.set(qr_stylesheet);
 
@@ -110,13 +113,13 @@ void create_qr_code(std::mutex& mutex,
       // update QR Code images - protected by mutex
       {
         std::lock_guard<std::mutex> lck(mutex);
-        qr_images[entry.name] = png;
+        qr_images[entry.title] = png;
       }
     }
     catch(const std::exception& ex)
     {
       std::lock_guard<std::mutex> lck(mutex);
-      qr_failures += fmt::format("\nfor entry: \"{}\": {}", entry.name, ex.what());
+      qr_failures += fmt::format("\nfor entry: \"{}\": {}", entry.title, ex.what());
     }
 
     // update progress-bar - protected by mutex
@@ -181,7 +184,7 @@ int main(int argc, char** argv)
       throw std::runtime_error(fmt::format("invalid output filename: \"{}\"", pdf_file.u8string()));
 
     // parse bitwarden json file
-    std::map<std::string, struct entry> qr_entries;
+    std::queue<struct qr_entry> qr_entries;
     exec("parse bitwarden json file", [&]() {
       // open json file for read
       std::ifstream file(json_file);
@@ -217,22 +220,34 @@ int main(int argc, char** argv)
         if (!item.contains("login") || !item["login"].is_object())
           throw std::runtime_error("invalid json file format");
 
-        // extract fields from item
-        struct entry entry;
-        entry.name = get_field(item, "name");
-        entry.username = get_field(item["login"], "username");
-        entry.password = get_field(item["login"], "password");
-        entry.totp = get_field(item["login"], "totp");
-        if (item["login"].contains("uris") && item["login"]["uris"].size())
-          entry.url = get_field(item["login"]["uris"].at(0), "uri");
-
+        // create json object based on entry
+        json entry;
+        entry["login"] = json::object();
+        entry["login"]["username"] = get_field(item["login"], "username");
+        entry["login"]["password"] = get_field(item["login"], "password");
+        entry["login"]["totp"] = get_field(item["login"], "totp");
+        entry["fields"] = json::array();
         if (item.contains("fields"))
+        {
           for (const auto& field : item["fields"])
+          {
             if (!get_field(field, "name").empty())
-              entry.fields[get_field(field, "name")] = get_field(field, "value");
+            {
+              json obj;
+              obj[get_field(field, "name")] = get_field(field, "value");
+              entry["fields"].push_back(obj);
+            }
+          }
+        }
 
-        // add to map of entries
-        qr_entries[entry.name] = entry;
+        // create qrcode entry
+        const std::string& title = get_field(item, "name");
+        const std::string& data = std::regex_replace(entry.dump(2), std::regex(R"([ ]{4}[{]\s[ ]{6}([^\n]+)\n[ ]{4}[}])"), "    { $1 }");
+        const std::string& url = (item["login"].contains("uris") && item["login"]["uris"].size()) ? 
+          get_field(item["login"]["uris"].at(0), "uri") : "";
+
+        // add to queue of qrcodes
+        qr_entries.push({ utf8::to_utf8(title), utf8::to_utf8(data), url });
       }
       });
     if (qr_entries.empty())
@@ -259,11 +274,6 @@ int main(int argc, char** argv)
         option::frame_font_size(frame_font_size)
       };
 
-      // create queue of entries
-      std::queue<struct entry> entries;
-      for(const auto& [k, v]: qr_entries)
-        entries.push(v);
-
       // list of QR Code failures
       std::string qr_failures;
 
@@ -275,8 +285,8 @@ int main(int argc, char** argv)
       for (auto& t : threads)
         t = std::thread(create_qr_code,
                         std::ref(mutex),
-                        std::ref(entries),
                         std::ref(qr_images),
+                        std::ref(qr_entries),
                         std::ref(qr_stylesheet),
                         std::ref(qr_failures),
                         std::ref(progress_bar));

@@ -23,7 +23,7 @@
 
 using json = nlohmann::ordered_json;
 
-// initialize graphicsmagick only once
+// graphicsmagick library helper class
 class GraphicsMagick final
 {
 public:
@@ -66,6 +66,30 @@ public:
     }
   }
 
+  // convert from std::string to Magick::Color
+  static Magick::Color GetColor(const std::string& color)
+  {
+    try
+    {
+      return Magick::Color(color);
+    }
+    catch (const std::exception& ex)
+    {
+      throw std::runtime_error("can't convert color: \"" + color + "\"");
+    }
+  }
+
+  // convert the data from Magick::Image to std::string buffer
+  static std::string ToString(const Magick::Image& img)
+  {
+    Magick::Blob blob;
+    Magick::Image& i = const_cast<Magick::Image&>(img);
+    i.write(&blob);
+    std::string str;
+    str.assign(static_cast<const char*>(blob.data()), blob.length());
+    return str;
+  }
+
 private:
   static bool m_initialized;
   static std::mutex m_mutex;
@@ -86,28 +110,9 @@ public:
     // disable opencv logging system
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 
-    // check that all mandatory options are set
-    std::vector<details::option_id> missing_ids;
-    if (!m_options.hasArgs(
-      {
-        details::option_id::qrcode_name,
-        details::option_id::qrcode_username,
-        details::option_id::qrcode_password,
-        details::option_id::qrcode_totp,
-        details::option_id::qrcode_url,
-        details::option_id::qrcode_fields
-      },
-      missing_ids))
-    {
-      std::string err = "missing mandatory argument: ";
-      err += "[ ";
-      for(const auto& ids: missing_ids)
-        err += fmt::format("{}{} ", 
-          details::option_name.at(ids), 
-          (&ids != &missing_ids.back()) ? "," : "");
-      err += "]";
-      throw std::runtime_error(err);
-    }
+    // check that mandatory option are set
+    if (!m_options.hasArg(details::option_id::qrcode_data))
+      throw std::runtime_error("missing mandatory argument: qrcode-data");
   }
   ~QrCodeImpl() = default;
 
@@ -120,69 +125,21 @@ public:
   // generate png image of qrcode in std::string
   const struct PngImage get() const
   {
-    // generate the json text for this entry
-    //  json string will always have the same size
-    const std::string& json = get_json(
-      m_options.getArg<std::string>(details::option_id::qrcode_name),
-      m_options.getArg<std::string>(details::option_id::qrcode_username),
-      m_options.getArg<std::string>(details::option_id::qrcode_password),
-      m_options.getArg<std::string>(details::option_id::qrcode_totp),
-      m_options.getArg<std::map<std::string, std::string>>(details::option_id::qrcode_fields)
-    );
-
     // create QR Code using qrcodegen library
     //  using HIGH error correction level (ecc >= 30%)
-    const qrcodegen::QrCode& qr = qrcodegen::QrCode::encodeText(json.c_str(), qrcodegen::QrCode::Ecc::HIGH);
+    const std::string& qrcode_data = m_options.getArg<std::string>(details::option_id::qrcode_data);
+    const qrcodegen::QrCode& qr = qrcodegen::QrCode::encodeText(qrcode_data.c_str(), qrcodegen::QrCode::Ecc::HIGH);
 
-    // create QR Code png image
-    const Magick::Image& qrcode = get_qrcode(
-      qr, 
-      m_options.getArg<std::string>(details::option_id::qrcode_background_color),
-      m_options.getArg<std::string>(details::option_id::qrcode_module_color),
-      m_options.getArg<uint8_t>(details::option_id::qrcode_module_px_size),
-      m_options.getArg<uint8_t>(details::option_id::qrcode_border_px_size));
+    // create all png images
+    const Magick::Image& qrcode = get_qrcode_png(qr);
+    const Magick::Image& logo = get_logo_png();
+    const Magick::Image& text = get_text_png();
+    const Magick::Image& frame = get_frame_png(qrcode.columns(), qrcode.rows());
 
-    // create QR Code logo image
-    const uint8_t frame_logo_size = m_options.getArg<uint8_t>(details::option_id::frame_logo_size);
-    Magick::Image logo;
-    if (frame_logo_size)
-    {
-      logo = get_logo(
-        m_options.getArg<std::string>(details::option_id::qrcode_url),
-        m_options.getArg<std::string>(details::option_id::qrcode_background_color),
-        frame_logo_size);
-    }
-
-    // create QR Code text
-    const Magick::Image& text = get_text(
-      m_options.getArg<std::string>(details::option_id::qrcode_name),
-      m_options.getArg<std::string>(details::option_id::frame_border_color),
-      m_options.getArg<std::string>(details::option_id::frame_font_family),
-      m_options.getArg<std::string>(details::option_id::frame_font_color),
-      m_options.getArg<double>(details::option_id::frame_font_size));
-
-    // create Qr Code frame
-    const uint8_t frame_border_width_size = m_options.getArg<uint8_t>(details::option_id::frame_border_width_size);
-    const uint8_t frame_border_height_size = m_options.getArg<uint8_t>(details::option_id::frame_border_height_size);
-    const Magick::Image& frame = get_frame(
-      qrcode.columns(),
-      qrcode.rows(),
-      m_options.getArg<std::string>(details::option_id::qrcode_background_color),
-      m_options.getArg<std::string>(details::option_id::frame_border_color),
-      frame_border_width_size,
-      frame_border_height_size,
-      m_options.getArg<uint8_t>(details::option_id::frame_border_radius));
-
-    // lambda to convert from Magick::Image to std::string
-    auto to_string = [](Magick::Image& img) -> const std::string {
-      Magick::Blob blob;
-      img.write(&blob);
-      std::string str;
-      str.assign(static_cast<const char*>(blob.data()), blob.length());
-      return str;
-    };
-
-    // assemble image with logo - try to decode with opencv
+    // assemble all png images with logo - try to decode with opencv
+    const std::string& title = m_options.getArg<std::string>(details::option_id::qrcode_title);
+    const std::size_t frame_border_width_size = m_options.getArg<std::size_t>(details::option_id::frame_border_width_size);
+    const std::size_t frame_border_height_size = title.empty() ? 0 : m_options.getArg<std::size_t>(details::option_id::frame_border_height_size);
     if (logo.isValid())
     {
       Magick::Image with_logo(Magick::Geometry(frame.columns(), frame.rows()), Magick::Color("transparent"));
@@ -191,19 +148,19 @@ public:
       with_logo.composite(logo, frame_border_width_size + (qrcode.rows() - logo.rows()) / 2, frame_border_width_size + (qrcode.rows() - logo.rows()) / 2, MagickLib::OverCompositeOp);
       with_logo.composite(text, (frame.columns() - text.columns()) / 2, frame_border_width_size + qrcode.rows() + (frame_border_height_size - text.rows()) / 2, MagickLib::OverCompositeOp);
       with_logo.magick("PNG");
-      const std::string& png = to_string(with_logo);
-      if (check_validity(json, png))
+      const std::string& png = GraphicsMagick::ToString(with_logo);
+      if (check_validity(qrcode_data, png))
         return { with_logo.columns(), with_logo.rows(), png };
     }
-    // assemble image without logo - try to decode with opencv
+    // assemble all png images without logo - try to decode with opencv
     {
       Magick::Image without_logo(Magick::Geometry(frame.columns(), frame.rows()), Magick::Color("transparent"));
       without_logo.composite(frame, 0, 0, MagickLib::OverCompositeOp);
       without_logo.composite(qrcode, frame_border_width_size, frame_border_width_size, MagickLib::OverCompositeOp);
       without_logo.composite(text, (frame.columns() - text.columns()) / 2, frame_border_width_size + qrcode.rows() + (frame_border_height_size - text.rows()) / 2, MagickLib::OverCompositeOp);
       without_logo.magick("PNG");
-      const std::string& png = to_string(without_logo);
-      if (check_validity(json, png))
+      const std::string& png = GraphicsMagick::ToString(without_logo);
+      if (check_validity(qrcode_data, png))
         return { without_logo.columns(), without_logo.rows(), png };
       else
         throw std::runtime_error("can't decode QR Code image properly using opencv");
@@ -211,65 +168,17 @@ public:
   }
 
 private:
-  // convert from std::string to Magick::Color
-  const Magick::Color get_color(const std::string& str) const
-  {
-    try
-    {
-      return Magick::Color(str);
-    }
-    catch (const std::exception& ex)
-    {
-      throw std::runtime_error("can't convert color: \"" + str + "\"");
-    }
-  }
-
-  // generate the json text for this entry
-  const std::string get_json(const std::string& name,
-                             const std::string& username,
-                             const std::string& password,
-                             const std::string& totp,
-                             const std::map<std::string, std::string>& fields) const
-  {
-    // create json object based on entry
-    json entry;
-    entry["login"] = json::object();
-    entry["login"]["username"] = username;
-    entry["login"]["password"] = password;
-    entry["login"]["totp"] = totp;
-    entry["fields"] = json::array();
-    for (const auto& [k, v] : fields)
-    {
-      json field = json::object();
-      field[k] = v;
-      entry["fields"].push_back(field);
-    }
-
-    // serialize json to std::string
-    std::string json = entry.dump(2);
-    json = std::regex_replace(json, std::regex(R"([ ]{4}[{]\s[ ]{6}([^\n]+)\n[ ]{4}[}])"), "    { $1 }");
-    if (json.size() > 510)
-      throw std::runtime_error(fmt::format("can't convert '{}' - entry size too big: {}", name, json.size()));
-
-    // force the length of the json string: 510
-    // in order to always have QR Code of the same class/size
-    json = fmt::format("{:<510}", json);
-    return json;
-  }
-
   // create a png image based on the QR Code
-  const Magick::Image get_qrcode(const qrcodegen::QrCode& qr,
-                                 const std::string& background_color,
-                                 const std::string& module_color,
-                                 const std::size_t module_px_size,
-                                 const std::size_t border_px_size) const
+  const Magick::Image get_qrcode_png(const qrcodegen::QrCode& qr) const
   {
-    // initialize the image data with a white background - RGB format
-    std::vector<uint8_t> img_data(qr.getSize() * qr.getSize() * 3, 255);
+    // retrieve parameters
+    const std::string& background_color = m_options.getArg<std::string>(details::option_id::qrcode_background_color);
+    const std::string& module_color = m_options.getArg<std::string>(details::option_id::qrcode_module_color);
+    const std::size_t module_px_size = m_options.getArg<std::size_t>(details::option_id::qrcode_module_px_size);
+    const std::size_t border_px_size = m_options.getArg<std::size_t>(details::option_id::qrcode_border_px_size);
 
-    // initialize module colors
-    const Magick::Color module_on = get_color(module_color);
-    const Magick::Color module_off = get_color(background_color);
+    // initialize the image data with a white background - RGB format
+    std::vector<uint8_t> img_data(3.0 * qr.getSize() * qr.getSize(), 255);
 
     // iterate over each module in the QR Code
     for (int y = 0; y < qr.getSize(); ++y)
@@ -277,13 +186,15 @@ private:
       for (int x = 0; x < qr.getSize(); ++x) 
       {
         // determine the color of the current module
-        const Magick::Color& px_color = qr.getModule(x, y) ? module_on : module_off;
+        const Magick::Color& px_color = qr.getModule(x, y) ? 
+          GraphicsMagick::GetColor(module_color) : 
+          GraphicsMagick::GetColor(background_color);
 
         // set the color of the pixels in the image data for the current module
-        const int idx     = (y * qr.getSize() + x) * 3;
-        img_data[idx]     = px_color.redQuantum();
-        img_data[idx + 1] = px_color.greenQuantum();
-        img_data[idx + 2] = px_color.blueQuantum();
+        const int idx       = (y * qr.getSize() + x) * 3;
+        img_data[idx]       = px_color.redQuantum();
+        img_data[idx + 1.0] = px_color.greenQuantum();
+        img_data[idx + 2.0] = px_color.blueQuantum();
       }
     }
 
@@ -296,7 +207,7 @@ private:
     const std::size_t img_size = png.rows() + (border_px_size * module_px_size * 2);
     Magick::Image qrcode(Magick::Geometry(img_size, img_size), Magick::Color("transparent"));
     qrcode.draw({ 
-      Magick::DrawableFillColor(module_off),
+      Magick::DrawableFillColor(GraphicsMagick::GetColor(background_color)),
       Magick::DrawableRoundRectangle(0, 0, img_size - 1, img_size - 1, 10, 10)
       });
     qrcode.composite(png, border_px_size * module_px_size, border_px_size * module_px_size, MagickLib::OverCompositeOp);
@@ -305,14 +216,17 @@ private:
   }
 
   // retrieve the favicon as a png image
-  const Magick::Image get_logo(const std::string& url, 
-                               const std::string& background_color,
-                               const uint8_t logo_size) const
+  const Magick::Image get_logo_png() const
   {
     try
     {
+      // retrieve parameters
+      const std::string& url = m_options.getArg<std::string>(details::option_id::qrcode_url);
+      const std::string& background_color = m_options.getArg<std::string>(details::option_id::qrcode_background_color);
+      const std::size_t logo_size = m_options.getArg<std::size_t>(details::option_id::frame_logo_size);
+
       // skip empty url logo
-      if (url.empty())
+      if (!logo_size || url.empty())
         return {};
 
       // download the favicon
@@ -352,7 +266,7 @@ private:
       // create logo
       Magick::Image logo(Magick::Geometry(logo_size, logo_size), Magick::Color("transparent"));
       logo.draw({ 
-        Magick::DrawableFillColor(get_color(background_color)),
+        Magick::DrawableFillColor(GraphicsMagick::GetColor(background_color)),
         Magick::DrawableRoundRectangle(0, 0, logo_size - 1, logo_size - 1, 10, 10)
         });
       logo.composite(icon_image, 0, 0, MagickLib::OverCompositeOp);
@@ -366,12 +280,19 @@ private:
   }
 
   // create QR Code text
-  const Magick::Image get_text(const std::string& title,
-                               const std::string& background_color,
-                               const std::string& font_family,
-                               const std::string& font_color,
-                               const double font_size) const
+  const Magick::Image get_text_png() const
   {
+    // retrieve parameters
+    const std::string& title = m_options.getArg<std::string>(details::option_id::qrcode_title);
+    const std::string& background_color = m_options.getArg<std::string>(details::option_id::frame_border_color);
+    const std::string& font_family = m_options.getArg<std::string>(details::option_id::frame_font_family);
+    const std::string& font_color = m_options.getArg<std::string>(details::option_id::frame_font_color);
+    const double font_size = m_options.getArg<double>(details::option_id::frame_font_size);
+
+    // skip empty text
+    if (!font_size || title.empty())
+      return {};
+
     // set max size of title to 16 chars
     const std::string& str = title.substr(0, 16);
 
@@ -388,7 +309,7 @@ private:
     Magick::Image text(Magick::Geometry(metrics.textWidth(), static_cast<int>(font_size)), Magick::Color("transparent"));
     text.draw({
       Magick::DrawableFont(font_family),
-      Magick::DrawableFillColor(get_color(font_color)),
+      Magick::DrawableFillColor(GraphicsMagick::GetColor(font_color)),
       Magick::DrawablePointSize(font_size),
       Magick::DrawableTextAntialias(true),
       Magick::DrawableText(0, font_size + metrics.descent() + 2, str.c_str())
@@ -398,19 +319,22 @@ private:
   }
 
   // create Qr Code Frame
-  const Magick::Image get_frame(const std::size_t qr_width,
-                                const std::size_t qr_height,
-                                const std::string& background_color,
-                                const std::string& frame_color,
-                                const uint8_t frame_border_width_size,
-                                const uint8_t frame_border_height_size,
-                                const uint8_t frame_border_radius) const
+  const Magick::Image get_frame_png(const std::size_t qr_width, const std::size_t qr_height) const
   {
-    const std::size_t width = qr_width + frame_border_width_size * 2;
+    // retrieve parameters
+    const std::string& title = m_options.getArg<std::string>(details::option_id::qrcode_title);
+    const std::string& background_color = m_options.getArg<std::string>(details::option_id::qrcode_background_color);
+    const std::string& frame_color = m_options.getArg<std::string>(details::option_id::frame_border_color);
+    const std::size_t frame_border_width_size = m_options.getArg<std::size_t>(details::option_id::frame_border_width_size);
+    const std::size_t frame_border_height_size = title.empty() ? 0 : m_options.getArg<std::size_t>(details::option_id::frame_border_height_size);
+    const std::size_t frame_border_radius = m_options.getArg<std::size_t>(details::option_id::frame_border_radius);
+
+    // create the frame
+    const std::size_t width = qr_width + frame_border_width_size * 2.0;
     const std::size_t height = qr_height + frame_border_width_size + frame_border_height_size;
     Magick::Image frame(Magick::Geometry(width, height), Magick::Color("transparent"));
     frame.draw({
-      Magick::DrawableFillColor(get_color(frame_color)),
+      Magick::DrawableFillColor(GraphicsMagick::GetColor(frame_color)),
       Magick::DrawableRoundRectangle(0, 0, width - 1, height - 1, frame_border_radius, frame_border_radius)
       });
     frame.magick("PNG");

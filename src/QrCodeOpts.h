@@ -12,12 +12,9 @@ namespace details
   // list of option id
   enum class option_id
   {
-    qrcode_name,
-    qrcode_username,
-    qrcode_password,
-    qrcode_totp,
+    qrcode_title,
+    qrcode_data,
     qrcode_url,
-    qrcode_fields,
     qrcode_module_px_size,
     qrcode_border_px_size,
     qrcode_module_color,
@@ -33,12 +30,9 @@ namespace details
   };
   const std::map<option_id, std::string> option_name = 
   {
-    {option_id::qrcode_name,              "qrcode-name"},
-    {option_id::qrcode_username,          "qrcode-username"},
-    {option_id::qrcode_password,          "qrcode-password"},
-    {option_id::qrcode_totp,              "qrcode-totp"},
+    {option_id::qrcode_title,             "qrcode-title"},
+    {option_id::qrcode_data,              "qrcode-data"},
     {option_id::qrcode_url,               "qrcode-url"},
-    {option_id::qrcode_fields,            "qrcode-fields"},
     {option_id::qrcode_module_px_size,    "qrcode-module-px-size"},
     {option_id::qrcode_border_px_size,    "qrcode-border-px-size"},
     {option_id::qrcode_module_color,      "qrcode-module-color"},
@@ -79,21 +73,18 @@ namespace details
 namespace option
 {
   // define options and their data type (to check format type afterwards)
-  using qrcode_name               = details::option_data<details::option_id::qrcode_name,               std::string>;
-  using qrcode_username           = details::option_data<details::option_id::qrcode_username,           std::string>;
-  using qrcode_password           = details::option_data<details::option_id::qrcode_password,           std::string>;
-  using qrcode_totp               = details::option_data<details::option_id::qrcode_totp,               std::string>;
+  using qrcode_title              = details::option_data<details::option_id::qrcode_title,              std::string>;
+  using qrcode_data               = details::option_data<details::option_id::qrcode_data,               std::string>;
   using qrcode_url                = details::option_data<details::option_id::qrcode_url,                std::string>;
-  using qrcode_fields             = details::option_data<details::option_id::qrcode_fields,             std::map<std::string, std::string>>;
-  using qrcode_module_px_size     = details::option_data<details::option_id::qrcode_module_px_size,     uint8_t>;
-  using qrcode_border_px_size     = details::option_data<details::option_id::qrcode_border_px_size,     uint8_t>;
+  using qrcode_module_px_size     = details::option_data<details::option_id::qrcode_module_px_size,     std::size_t>;
+  using qrcode_border_px_size     = details::option_data<details::option_id::qrcode_border_px_size,     std::size_t>;
   using qrcode_module_color       = details::option_data<details::option_id::qrcode_module_color,       std::string>;
   using qrcode_background_color   = details::option_data<details::option_id::qrcode_background_color,   std::string>;
   using frame_border_color        = details::option_data<details::option_id::frame_border_color,        std::string>;
-  using frame_border_width_size   = details::option_data<details::option_id::frame_border_width_size,   uint8_t>;
-  using frame_border_height_size  = details::option_data<details::option_id::frame_border_height_size,  uint8_t>;
-  using frame_border_radius       = details::option_data<details::option_id::frame_border_radius,       uint8_t>;
-  using frame_logo_size           = details::option_data<details::option_id::frame_logo_size,           uint8_t>;
+  using frame_border_width_size   = details::option_data<details::option_id::frame_border_width_size,   std::size_t>;
+  using frame_border_height_size  = details::option_data<details::option_id::frame_border_height_size,  std::size_t>;
+  using frame_border_radius       = details::option_data<details::option_id::frame_border_radius,       std::size_t>;
+  using frame_logo_size           = details::option_data<details::option_id::frame_logo_size,           std::size_t>;
   using frame_font_family         = details::option_data<details::option_id::frame_font_family,         std::string>;
   using frame_font_color          = details::option_data<details::option_id::frame_font_color,          std::string>;
   using frame_font_size           = details::option_data<details::option_id::frame_font_size,           double>;
@@ -104,12 +95,9 @@ namespace details
   // variant which contains all the different options available
   using OptionsVal = 
     std::variant<
-      option::qrcode_name,
-      option::qrcode_username,
-      option::qrcode_password,
-      option::qrcode_totp,
+      option::qrcode_title,
+      option::qrcode_data,
       option::qrcode_url,
-      option::qrcode_fields,
       option::qrcode_module_px_size,
       option::qrcode_border_px_size,
       option::qrcode_module_color,
@@ -125,7 +113,7 @@ namespace details
     >;
 
   // variant which contains all the different options data types
-  using OptionsType = std::variant<std::string, std::map<std::string, std::string>, uint8_t, bool, double>;
+  using OptionsType = std::variant<std::string, std::size_t, double>;
 
   // store all the different options
   class Options final
@@ -143,12 +131,9 @@ namespace details
     {
       for (const auto& o : opts)
       {
-        if      (std::holds_alternative<option::qrcode_name>(o))              setArg(option_id::qrcode_name,              std::get<option::qrcode_name>(o).arg);
-        else if (std::holds_alternative<option::qrcode_username>(o))          setArg(option_id::qrcode_username,          std::get<option::qrcode_username>(o).arg);
-        else if (std::holds_alternative<option::qrcode_password>(o))          setArg(option_id::qrcode_password,          std::get<option::qrcode_password>(o).arg);
-        else if (std::holds_alternative<option::qrcode_totp>(o))              setArg(option_id::qrcode_totp,              std::get<option::qrcode_totp>(o).arg);
+        if      (std::holds_alternative<option::qrcode_title>(o))             setArg(option_id::qrcode_title,             std::get<option::qrcode_title>(o).arg);
+        else if (std::holds_alternative<option::qrcode_data>(o))              setArg(option_id::qrcode_data,              std::get<option::qrcode_data>(o).arg);
         else if (std::holds_alternative<option::qrcode_url>(o))               setArg(option_id::qrcode_url,               std::get<option::qrcode_url>(o).arg);
-        else if (std::holds_alternative<option::qrcode_fields>(o))            setArg(option_id::qrcode_fields,            std::get<option::qrcode_fields>(o).arg);
         else if (std::holds_alternative<option::qrcode_module_px_size>(o))    setArg(option_id::qrcode_module_px_size,    std::get<option::qrcode_module_px_size>(o).arg);
         else if (std::holds_alternative<option::qrcode_border_px_size>(o))    setArg(option_id::qrcode_border_px_size,    std::get<option::qrcode_border_px_size>(o).arg);
         else if (std::holds_alternative<option::qrcode_module_color>(o))      setArg(option_id::qrcode_module_color,      std::get<option::qrcode_module_color>(o).arg);
