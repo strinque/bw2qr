@@ -13,9 +13,7 @@
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <Magick++.h>
-#include <opencv2/core/utils/logger.hpp>
-#include <opencv2/objdetect.hpp>
-#include <opencv2/imgcodecs.hpp>
+#include <ZXing/ReadBarcode.h>
 #include "QrCode.h"
 #include "Icon.hpp"
 #include "type_mgk.h"
@@ -107,9 +105,6 @@ public:
     // initialize graphicsmagick only once
     GraphicsMagick::Initialize();
 
-    // disable opencv logging system
-    cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
-
     // check that mandatory option are set
     if (!m_options.hasArg(details::option_id::qrcode_data))
       throw std::runtime_error("missing mandatory argument: qrcode-data");
@@ -136,7 +131,7 @@ public:
     const Magick::Image& text = get_text_png();
     const Magick::Image& frame = get_frame_png(qrcode.columns(), qrcode.rows());
 
-    // assemble all png images with logo - try to decode with opencv
+    // assemble all png images with logo - try to decode with ZXing
     const std::string& title = m_options.getArg<std::string>(details::option_id::qrcode_title);
     const std::size_t frame_border_width_size = m_options.getArg<std::size_t>(details::option_id::frame_border_width_size);
     const std::size_t frame_border_height_size = title.empty() ? 0 : m_options.getArg<std::size_t>(details::option_id::frame_border_height_size);
@@ -148,22 +143,20 @@ public:
       with_logo.composite(logo, frame_border_width_size + (qrcode.rows() - logo.rows()) / 2, frame_border_width_size + (qrcode.rows() - logo.rows()) / 2, MagickLib::OverCompositeOp);
       with_logo.composite(text, (frame.columns() - text.columns()) / 2, frame_border_width_size + qrcode.rows() + (frame_border_height_size - text.rows()) / 2, MagickLib::OverCompositeOp);
       with_logo.magick("PNG");
-      const std::string& png = GraphicsMagick::ToString(with_logo);
-      if (check_validity(qrcode_data, png))
-        return { with_logo.columns(), with_logo.rows(), png };
+      if (decode_qr_code(with_logo) == qrcode_data)
+        return { with_logo.columns(), with_logo.rows(), GraphicsMagick::ToString(with_logo) };
     }
-    // assemble all png images without logo - try to decode with opencv
+    // assemble all png images without logo - try to decode with ZXing
     {
       Magick::Image without_logo(Magick::Geometry(frame.columns(), frame.rows()), Magick::Color("transparent"));
       without_logo.composite(frame, 0, 0, MagickLib::OverCompositeOp);
       without_logo.composite(qrcode, frame_border_width_size, frame_border_width_size, MagickLib::OverCompositeOp);
       without_logo.composite(text, (frame.columns() - text.columns()) / 2, frame_border_width_size + qrcode.rows() + (frame_border_height_size - text.rows()) / 2, MagickLib::OverCompositeOp);
       without_logo.magick("PNG");
-      const std::string& png = GraphicsMagick::ToString(without_logo);
-      if (check_validity(qrcode_data, png))
-        return { without_logo.columns(), without_logo.rows(), png };
+      if (decode_qr_code(without_logo) == qrcode_data)
+        return { without_logo.columns(), without_logo.rows(), GraphicsMagick::ToString(without_logo) };
       else
-        throw std::runtime_error("can't decode QR Code image properly using opencv");
+        throw std::runtime_error("can't decode QR Code image properly using ZXing");
     }
   }
 
@@ -222,7 +215,6 @@ private:
     {
       // retrieve parameters
       const std::string& url = m_options.getArg<std::string>(details::option_id::qrcode_url);
-      const std::string& background_color = m_options.getArg<std::string>(details::option_id::qrcode_background_color);
       const std::size_t logo_size = m_options.getArg<std::size_t>(details::option_id::frame_logo_size);
 
       // skip empty url logo
@@ -265,8 +257,8 @@ private:
 
       // create logo
       Magick::Image logo(Magick::Geometry(logo_size, logo_size), Magick::Color("transparent"));
-      logo.draw({ 
-        Magick::DrawableFillColor(GraphicsMagick::GetColor(background_color)),
+      logo.draw({
+        Magick::DrawableFillColor(GraphicsMagick::GetColor(Magick::Color("white"))),
         Magick::DrawableRoundRectangle(0, 0, logo_size - 1, logo_size - 1, 10, 10)
         });
       logo.composite(icon_image, 0, 0, MagickLib::OverCompositeOp);
@@ -341,20 +333,32 @@ private:
     return frame;
   }
 
-  // try to decode the QR Code with opencv
-  bool check_validity(const std::string& json_str,
-                      const std::string& png_buf) const
+  // try to decode the QR Code with ZXing
+  const std::string decode_qr_code(const Magick::Image& img) const
   {
-    // convert from png to opencv buffer
-    std::vector<uchar> data(png_buf.cbegin(), png_buf.cend());
-    cv::Mat img = cv::imdecode(data, cv::IMREAD_COLOR);
-    if (img.empty())
-      return false;
+    try
+    {
+      // convert Magick::Image PNG image to RGB std::vector
+      const int width = img.columns();
+      const int height = img.rows();
+      std::vector<unsigned char> data(width * height * 3, 0);
+      Magick::Image& i = const_cast<Magick::Image&>(img);
+      i.write(0, 0, width, height, "RGB", Magick::CharPixel, &data[0]);
 
-    // decode png image QR Code
-    cv::QRCodeDetector qr_decoder;
-    const std::string& decoded_str = qr_decoder.detectAndDecode(img);
-    return json_str == decoded_str;
+      // decode QR Code using ZXing library
+      ZXing::DecodeHints hints;
+      hints.setTryHarder(true);
+      hints.setFormats(ZXing::BarcodeFormat::QRCode);
+      ZXing::ImageView image{ data.data(), width, height, ZXing::ImageFormat::RGB };
+      ZXing::Result res = ZXing::ReadBarcode(image, hints);
+      if (!res.isValid())
+        return {};
+      return res.text();
+    }
+    catch (const std::exception& ex)
+    {
+      return {};
+    }
   }
 
 private:

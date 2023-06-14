@@ -1,13 +1,13 @@
 {
     "name": "bw2qr",
-    "version": "2.4.1",
+    "version": "2.5.0",
     "dependencies": [
       "nayuki-qr-code-generator",
       "podofo",
       "openssl",
       "cpp-httplib",
       "graphicsmagick",
-      {"name": "opencv", "features": ["quirc"]},
+      "nu-book-zxing-cpp",
       "nlohmann-json",
       "fmt",
       "winpp"

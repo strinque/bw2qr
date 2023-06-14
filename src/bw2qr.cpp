@@ -32,7 +32,7 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "2.4.1";
+const std::string PROGRAM_VERSION = "2.5.0";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
