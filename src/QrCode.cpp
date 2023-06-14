@@ -13,6 +13,9 @@
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <Magick++.h>
+#include <opencv2/core/utils/logger.hpp>
+#include <opencv2/objdetect.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include "QrCode.h"
 #include "Icon.hpp"
 #include "type_mgk.h"
@@ -79,6 +82,9 @@ public:
   {
     // initialize graphicsmagick only once
     GraphicsMagick::Initialize();
+
+    // disable opencv logging system
+    cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 
     // check that all mandatory options are set
     std::vector<details::option_id> missing_ids;
@@ -167,24 +173,41 @@ public:
       frame_border_height_size,
       m_options.getArg<uint8_t>(details::option_id::frame_border_radius));
 
-    // assemble image
-    Magick::Image full(Magick::Geometry(frame.columns(), frame.rows()), Magick::Color("transparent"));
-    full.composite(frame, 0, 0, MagickLib::OverCompositeOp);
-    full.composite(qrcode, frame_border_width_size, frame_border_width_size, MagickLib::OverCompositeOp);
-    full.composite(logo, frame_border_width_size + (qrcode.rows() - logo.rows()) / 2, frame_border_width_size + (qrcode.rows() - logo.rows()) / 2, MagickLib::OverCompositeOp);
-    full.composite(text, (frame.columns() - text.columns()) / 2 , frame_border_width_size + qrcode.rows() + (frame_border_height_size - text.rows()) / 2, MagickLib::OverCompositeOp);
-    full.magick("PNG");
+    // lambda to convert from Magick::Image to std::string
+    auto to_string = [](Magick::Image& img) -> const std::string {
+      Magick::Blob blob;
+      img.write(&blob);
+      std::string str;
+      str.assign(static_cast<const char*>(blob.data()), blob.length());
+      return str;
+    };
 
-    // convert image to blob data
-    Magick::Blob blob;
-    full.write(&blob);
-
-    // create PngImage
-    struct PngImage img;
-    img.width = full.columns();
-    img.height = full.rows();
-    img.data.assign(static_cast<const char*>(blob.data()), blob.length());
-    return img;
+    // assemble image with logo - try to decode with opencv
+    if (logo.isValid())
+    {
+      Magick::Image with_logo(Magick::Geometry(frame.columns(), frame.rows()), Magick::Color("transparent"));
+      with_logo.composite(frame, 0, 0, MagickLib::OverCompositeOp);
+      with_logo.composite(qrcode, frame_border_width_size, frame_border_width_size, MagickLib::OverCompositeOp);
+      with_logo.composite(logo, frame_border_width_size + (qrcode.rows() - logo.rows()) / 2, frame_border_width_size + (qrcode.rows() - logo.rows()) / 2, MagickLib::OverCompositeOp);
+      with_logo.composite(text, (frame.columns() - text.columns()) / 2, frame_border_width_size + qrcode.rows() + (frame_border_height_size - text.rows()) / 2, MagickLib::OverCompositeOp);
+      with_logo.magick("PNG");
+      const std::string& png = to_string(with_logo);
+      if (check_validity(json, png))
+        return { with_logo.columns(), with_logo.rows(), png };
+    }
+    // assemble image without logo - try to decode with opencv
+    {
+      Magick::Image without_logo(Magick::Geometry(frame.columns(), frame.rows()), Magick::Color("transparent"));
+      without_logo.composite(frame, 0, 0, MagickLib::OverCompositeOp);
+      without_logo.composite(qrcode, frame_border_width_size, frame_border_width_size, MagickLib::OverCompositeOp);
+      without_logo.composite(text, (frame.columns() - text.columns()) / 2, frame_border_width_size + qrcode.rows() + (frame_border_height_size - text.rows()) / 2, MagickLib::OverCompositeOp);
+      without_logo.magick("PNG");
+      const std::string& png = to_string(without_logo);
+      if (check_validity(json, png))
+        return { without_logo.columns(), without_logo.rows(), png };
+      else
+        throw std::runtime_error("can't decode QR Code image properly using opencv");
+    }
   }
 
 private:
@@ -392,6 +415,22 @@ private:
       });
     frame.magick("PNG");
     return frame;
+  }
+
+  // try to decode the QR Code with opencv
+  bool check_validity(const std::string& json_str,
+                      const std::string& png_buf) const
+  {
+    // convert from png to opencv buffer
+    std::vector<uchar> data(png_buf.cbegin(), png_buf.cend());
+    cv::Mat img = cv::imdecode(data, cv::IMREAD_COLOR);
+    if (img.empty())
+      return false;
+
+    // decode png image QR Code
+    cv::QRCodeDetector qr_decoder;
+    const std::string& decoded_str = qr_decoder.detectAndDecode(img);
+    return json_str == decoded_str;
   }
 
 private:

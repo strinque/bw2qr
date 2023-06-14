@@ -36,6 +36,7 @@ find_package(httplib CONFIG REQUIRED)
 find_package(unofficial-graphicsmagick CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(PoDoFo CONFIG REQUIRED)
+find_package(OpenCV CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(winpp CONFIG REQUIRED)
 
@@ -79,6 +80,9 @@ target_link_libraries(${TARGET_EXE}
     nlohmann_json::nlohmann_json
     $<$<CONFIG:Debug>:podofo_shared>
     $<$<NOT:$<CONFIG:Debug>>:podofo_static>
+    opencv_core
+    opencv_imgcodecs
+    opencv_objdetect
     fmt::fmt-header-only
     winpp::winpp)
 

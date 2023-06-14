@@ -2,7 +2,8 @@
 
 ## Introduction
 
-The **bw2qr** **c++** application allows users to convert an exported `json` vault file from **bitwarden** or **vaultwarden** into a printable `pdf` file. This can be useful for securely storing all of your passwords in one place. The program uses **qrcode** with high redundancy mode to print each entry, which helps to recover damaged entries.  
+The **bw2qr** **c++** application allows users to convert an exported `json` vault file from **bitwarden** or **vaultwarden** into a printable `pdf` file. This can be useful for securely storing all of your passwords in one place. The program uses **qrcode** with high redundancy mode to print each entry, which helps to recover damaged entries. It also checks the validity of the generated **qrcode** by trying to decode it using `opencv` library.  
+
 Implemented in c++17 and use `vcpkg`/`cmake` for the build-system.  
 
 It uses the `winpp` header-only library from: https://github.com/strinque/winpp.
@@ -15,6 +16,7 @@ It uses the `winpp` header-only library from: https://github.com/strinque/winpp.
 - [x] use `nayuki-qr-code-generator` to generate QR Code
 - [x] use `graphicsmagick` to create QR Code png image and frame
 - [x] use `PoDoFo` to create the `pdf` file
+- [x] use `opencv` to check the validity of the QR Code
 
 ## Description
 The program reads a **bitwarden** or **vaultwarden** `json` file and export specific entries that are tagged as `favorite` as **qrcode** exported in a `pdf` file. The exported entries include important login information such as *username*, *password*, *authenticator key*, and *custom fields*.
