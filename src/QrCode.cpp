@@ -141,8 +141,8 @@ namespace qr
       // create all png images
       const Magick::Image& qrcode = get_qrcode_png(qr);
       const Magick::Image& logo = get_logo_png();
-      const Magick::Image& text = get_text_png();
       const Magick::Image& frame = get_frame_png(qrcode.columns(), qrcode.rows());
+      const Magick::Image& text = get_text_png(frame.columns());
 
       // assemble all png images with logo - try to decode with ZXing
       const std::string& title = m_options.getArg<std::string>(details::option_id::qrcode_title);
@@ -298,7 +298,7 @@ namespace qr
     }
 
     // create QR Code text
-    const Magick::Image get_text_png() const
+    const Magick::Image get_text_png(const std::size_t width) const
     {
       // retrieve parameters
       const std::string& title = m_options.getArg<std::string>(details::option_id::qrcode_title);
@@ -308,20 +308,25 @@ namespace qr
       const double font_size = m_options.getArg<double>(details::option_id::frame_font_size);
 
       // skip empty text
-      if (!font_size || title.empty())
+      if (!font_size || title.empty() || !width)
         return {};
 
-      // set max size of title to 16 chars
-      const std::string& str = title.substr(0, 18);
-
-      // determine the text size
+      // determine the maximum text-size within this frame width
       Magick::TypeMetric metrics;
+      std::string str = title;
+      while(!str.empty())
       {
         Magick::Image text;
         text.font(font_family);
         text.fontPointsize(font_size);
-        text.fontTypeMetrics(str.c_str(), &metrics);
+        text.fontTypeMetrics(str, &metrics);
+        if (metrics.textWidth() > width)
+          str.resize(str.size() - 1);
+        else
+          break;
       }
+      if (str.empty())
+        return {};
 
       // write text in this bounding box
       Magick::Image text(Magick::Geometry(metrics.textWidth(), static_cast<int>(font_size)), Magick::Color("transparent"));
@@ -369,7 +374,7 @@ namespace qr
         // convert Magick::Image PNG image to RGB std::vector
         const int width = img.columns();
         const int height = img.rows();
-        std::vector<unsigned char> data(width * height * 3, 0);
+        std::vector<unsigned char> data(3.0 * width * height, 0);
         Magick::Image& i = const_cast<Magick::Image&>(img);
         i.write(0, 0, width, height, "RGB", Magick::CharPixel, &data[0]);
 

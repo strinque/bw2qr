@@ -1,6 +1,6 @@
 {
     "name": "bw2qr",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "dependencies": [
       "nayuki-qr-code-generator",
       "podofo",
