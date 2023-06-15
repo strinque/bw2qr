@@ -33,7 +33,7 @@ using json = nlohmann::ordered_json;
 ==============================================*/
 // program version
 const std::string PROGRAM_NAME = "bw2qr";
-const std::string PROGRAM_VERSION = "3.0.1";
+const std::string PROGRAM_VERSION = "3.0.2";
 
 // default length in characters to align status 
 constexpr std::size_t g_status_len = 50;
@@ -136,6 +136,11 @@ void create_qr_code(std::mutex& mutex,
     {
       std::lock_guard<std::mutex> lck(mutex);
       qr_failures += fmt::format("\nfor entry: \"{}\": {}", entry.title, ex.what());
+    }
+    catch (...)
+    {
+      std::lock_guard<std::mutex> lck(mutex);
+      qr_failures += fmt::format("\nfor entry: \"{}\": unknown issue", entry.title);
     }
 
     // update progress-bar - protected by mutex

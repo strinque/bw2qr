@@ -235,7 +235,7 @@ namespace qr
         if (!logo_size || url.empty())
           return {};
 
-        // download the favicon
+        // download the favicon - 3s timeout
         std::string favicon_ico;
         {
           const std::regex regex(R"((?:http[s]*://)?([^/]+))");
@@ -243,6 +243,8 @@ namespace qr
           if (!std::regex_search(url, sm, regex))
             return {};
           httplib::SSLClient client(sm.str(1));
+          client.set_connection_timeout(std::chrono::seconds(3));
+          client.set_read_timeout(std::chrono::seconds(3));
           auto res = client.Get("/favicon.ico");
           if (!res ||
               (res->status != 200) ||
