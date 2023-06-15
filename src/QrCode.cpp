@@ -15,7 +15,7 @@
 #include <Magick++.h>
 #include <ZXing/ReadBarcode.h>
 #include "QrCode.h"
-#include "Icon.hpp"
+#include "favicon.hpp"
 #include "type_mgk.h"
 #include "jbigkit/jbig.h"
 
@@ -222,7 +222,7 @@ namespace qr
       return qrcode;
     }
 
-    // retrieve the favicon as a png image
+    // retrieve the logo as a png image
     const Magick::Image get_logo_png() const
     {
       try
@@ -230,45 +230,21 @@ namespace qr
         // retrieve parameters
         const std::string& url = m_options.getArg<std::string>(details::option_id::qrcode_url);
         const std::size_t logo_size = m_options.getArg<std::size_t>(details::option_id::frame_logo_size);
-
-        // skip empty url logo
-        if (!logo_size || url.empty())
+        if (url.empty() || !logo_size)
           return {};
 
-        // download the favicon - 3s timeout
-        std::string favicon_ico;
-        {
-          const std::regex regex(R"((?:http[s]*://)?([^/]+))");
-          std::smatch sm;
-          if (!std::regex_search(url, sm, regex))
+        // download the logo - using google-api or favicon otherwise
+        std::string icon_content;
+        if (!favicon::download_with_google_api(url, logo_size, icon_content))
+          if (!favicon::download_with_generic_api(url, logo_size, icon_content))
             return {};
-          httplib::SSLClient client(sm.str(1));
-          client.set_connection_timeout(std::chrono::seconds(3));
-          client.set_read_timeout(std::chrono::seconds(3));
-          auto res = client.Get("/favicon.ico");
-          if (!res ||
-              (res->status != 200) ||
-              !res->body.size())
-              return {};
-          favicon_ico = res->body;
-        }
-
-        // extract biggest icon from favicon
-        const std::map<std::size_t, std::string>& icons = icon::get_icons(favicon_ico);
-        if (icons.empty())
-          return {};
-        std::string big_icon;
-        if (icons.find(logo_size) != icons.end())
-          big_icon = icons.find(logo_size)->second;
-        else
-          big_icon = icons.rbegin()->second;
 
         // load the favicon data and resize it
-        Magick::Blob blob_in(big_icon.c_str(), big_icon.size());
+        Magick::Blob blob_in(icon_content.c_str(), icon_content.size());
         Magick::Image icon_image;
-        icon_image.magick("ICO");
+        icon_image.magick("PNG");
         icon_image.read(blob_in);
-        if (icon::get_size(big_icon) != logo_size)
+        if (icon_image.columns() != logo_size)
           icon_image.resize(Magick::Geometry(logo_size, logo_size), Magick::FilterTypes::LanczosFilter);
 
         // create a mask of a rounded icon with white background

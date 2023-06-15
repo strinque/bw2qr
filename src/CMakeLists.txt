@@ -12,9 +12,9 @@ set(SOURCE_FILES
   bw2qr.cpp
   QrCode.cpp)
 set(HEADER_FILES
-  Icon.hpp
   QrCode.h
   QrCodeOpts.h
+  favicon.hpp
   type_mgk.h)
 set(OPENSSL_FILES
   openssl-aes.hpp
@@ -48,6 +48,7 @@ target_compile_definitions(${TARGET_EXE}
   PRIVATE
     FMT_HEADER_ONLY
     CPPHTTPLIB_OPENSSL_SUPPORT
+    CPPHTTPLIB_ZLIB_SUPPORT
     WIN32_LEAN_AND_MEAN)
 
 # force utf-8 encoding for source-files
